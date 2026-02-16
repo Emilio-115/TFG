@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import io
@@ -8,7 +9,9 @@ import os
 def _matrix_to_base64(matrix, title):
     """Genera la imagen de la matriz y la codifica en base64."""
     plt.figure(figsize=(5, 4))
-    sns.heatmap(matrix, annot=True, fmt='d', cmap='Blues',
+    is_float = isinstance(matrix, np.ndarray) and matrix.dtype in [np.float32, np.float64]
+    fmt = '.1f' if is_float else 'd'
+    sns.heatmap(matrix, annot=True, fmt=fmt, cmap='Blues',
                 xticklabels=['Pred False', 'Pred True'],
                 yticklabels=['Actual False', 'Actual True'])
     plt.title(f'Matriz de Confusión: {title}')
