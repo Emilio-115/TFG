@@ -5,6 +5,8 @@ from sklearn.model_selection import cross_validate, StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score,average_precision_score,classification_report, confusion_matrix, recall_score
 import optuna
 from register_data import generate_html_report
+from typing import List, Dict
+from collections import defaultdict
 
 col_selection = ['case', 'nhc_final', 'start_frame', 'end_frame', 'organ', 'organ_num', 
                  'any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse', 
@@ -112,7 +114,7 @@ class Results:
 def main_func():
     res = dict()
     
-    for p in range(0,len(prolapses)):  # len(prolapses)-1
+    for p in range(6,7):  # len(prolapses)-1
         data,objective = load_data(p)
         groups = data["case"] #Eliminar esta columna en el entreno?
         sgkf = StratifiedGroupKFold(n_splits=4,shuffle=True)
@@ -141,7 +143,80 @@ def main_func():
     return res
 
 
+def aggregate_experiments(experiments_list):
+    """
+    Calcula la media de los resultados de múltiples experimentos.
+    
+    Args:
+        experiments_list: Lista de diccionarios, cada uno con estructura 
+                         {enfermedad: Results}
+    
+    Returns:
+        dict: Diccionario con la media de los resultados por enfermedad
+    """
+    aggregated = defaultdict(lambda: {
+        'classification_reports': [],
+        'confusion_matrices': []
+    })
+    
+    for experiment in experiments_list:
+        for disease, results in experiment.items():
+            aggregated[disease]['classification_reports'].append(results.classif_report)
+            aggregated[disease]['confusion_matrices'].append(results.conf_matrix)
+    
+    final_results = {}
+    
+    for disease, data in aggregated.items():
+        conf_matrices = np.array(data['confusion_matrices'])
+        avg_conf_matrix = np.mean(conf_matrices, axis=0)
+        
+        reports = data['classification_reports']
+        avg_report = average_classification_reports(reports)
+
+        final_results[disease] = Results(avg_report, avg_conf_matrix)
+    
+    return final_results
+
+
+def average_classification_reports(reports):
+    """
+    Calcula la media de múltiples classification reports.
+    
+    Args:
+        reports: Lista de diccionarios con classification reports
+    
+    Returns:
+        dict: Classification report con valores promediados
+    """
+    if not reports:
+        return {}
+    
+    keys = reports[0].keys()
+    avg_report = {}
+    
+    for key in keys:
+        if key == 'accuracy':
+            # La accuracy es un valor simple
+            avg_report['accuracy'] = np.mean([r['accuracy'] for r in reports])
+        else:
+            # Para 'False', 'True', 'macro avg', 'weighted avg'
+            avg_report[key] = {}
+            metrics = reports[0][key].keys()
+            
+            for metric in metrics:
+                values = [r[key][metric] for r in reports]
+                avg_report[key][metric] = np.mean(values)
+    
+    return avg_report
+
+
+
+
 if __name__ == "__main__":
-    res = main_func()
+    experiments = []
+    for i in range(0,2):
+        experiments.append(main_func())
+
+    res = aggregate_experiments(experiments)
     context = "Reporte de resultados con la columna de casos eliminada, usando average_precission_score para la optimización y scale_pos_weigth para aquellos prolapsos desbalanceados"
     generate_html_report(res, "3.current_experiment.html", context)
