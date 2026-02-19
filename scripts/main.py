@@ -7,6 +7,7 @@ import optuna
 from register_data import generate_html_report
 from typing import List, Dict
 from collections import defaultdict
+from aggregations import group_cases_index,average_classification_reports
 
 col_selection = ['case', 'nhc_final', 'start_frame', 'end_frame', 'organ', 'organ_num', 
                  'any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse', 
@@ -114,32 +115,43 @@ class Results:
 def main_func():
     res = dict()
     
-    for p in range(6,7):  # len(prolapses)-1
+    for p in range(0,2):  # len(prolapses)-1
         data,objective = load_data(p)
         groups = data["case"] #Eliminar esta columna en el entreno?
         sgkf = StratifiedGroupKFold(n_splits=4,shuffle=True)
         train_index, eval_index = next(sgkf.split(data, objective, groups))
         train, train_obj = data.iloc[train_index].reset_index(drop=True),objective.iloc[train_index].reset_index(drop=True)
-        eval_data, eval_obj = data.iloc[eval_index].reset_index(drop=True).drop(columns=["case"]), objective.iloc[eval_index].reset_index(drop=True)
+        eval_data, eval_obj = data.iloc[eval_index].reset_index(drop=True), objective.iloc[eval_index].reset_index(drop=True)
         
         def obj(trial):
             return optimal_params(trial, data=train, objective=train_obj)
 
         study = optuna.create_study(direction='maximize')
-        study.optimize(obj, n_trials=25)
+        study.optimize(obj, n_trials=25, n_jobs=5)
 
-        train = train.drop(columns=["case"])
+        eval_grouped_by_index = group_cases_index(eval_data)
+        eval_data_no_case = eval_data.drop(columns=["case"])
+        
+
+        train_no_case = train.drop(columns=["case"])
         params = study.best_params
         params["enable_categorical"] = True
         xgbc = XGBClassifier(**params)
-        xgbc.fit(X=train,y=train_obj)
+        xgbc.fit(X=train_no_case,y=train_obj)
         #prediction = xgbc.predict_proba(X=eval_data)[:,1]
-        prediction = xgbc.predict(X=eval_data)
+        prediction = xgbc.predict(X=eval_data_no_case)
         #final_score = average_precision_score(y_true=eval_obj,y_score=prediction)
-        report = classification_report(y_true=eval_obj,y_pred=prediction,output_dict=True)
-        conf_matrix = confusion_matrix(y_true=eval_obj,y_pred=prediction) #[[TN FP],[FN TP]]
+
+        grouped_pred, grouped_y = group_predictions_by_case(eval_grouped_by_index,prediction, eval_obj)
+        #Descomentar estas dos
+        # report = classification_report(y_true=eval_obj,y_pred=prediction,output_dict=True)
+        # conf_matrix = confusion_matrix(y_true=eval_obj,y_pred=prediction) #[[TN FP],[FN TP]]
         
+        report = classification_report(y_true=grouped_y,y_pred=grouped_pred,output_dict=True)
+        conf_matrix = confusion_matrix(y_true=grouped_y,y_pred=grouped_pred) #[[TN FP],[FN TP]]
+
         res[prolapses[p]] = Results(report,conf_matrix)
+    print(res)
     return res
 
 
@@ -178,38 +190,21 @@ def aggregate_experiments(experiments_list):
     return final_results
 
 
-def average_classification_reports(reports):
-    """
-    Calcula la media de múltiples classification reports.
-    
-    Args:
-        reports: Lista de diccionarios con classification reports
-    
-    Returns:
-        dict: Classification report con valores promediados
-    """
-    if not reports:
-        return {}
-    
-    keys = reports[0].keys()
-    avg_report = {}
-    
-    for key in keys:
-        if key == 'accuracy':
-            # La accuracy es un valor simple
-            avg_report['accuracy'] = np.mean([r['accuracy'] for r in reports])
-        else:
-            # Para 'False', 'True', 'macro avg', 'weighted avg'
-            avg_report[key] = {}
-            metrics = reports[0][key].keys()
-            
-            for metric in metrics:
-                values = [r[key][metric] for r in reports]
-                avg_report[key][metric] = np.mean(values)
-    
-    return avg_report
 
 
+def group_predictions_by_case(cases_indexes: Dict, prediction, y: pd.Series):
+
+    indexes_values = cases_indexes.values()
+
+    grouped_preds = pd.Series([np.mean(prediction[case_indexes]) for case_indexes in indexes_values])
+    grouped_y = pd.Series([int(np.mean(y.iloc[case_indexes])) for case_indexes in indexes_values])
+    # print(cases_indexes.keys())
+    # print("#"*10)
+    # print(grouped_preds)
+    # print("#"*10)
+    # print(grouped_y)
+
+    return np.where(grouped_preds>=0.5,1,0), grouped_y
 
 
 if __name__ == "__main__":
@@ -220,3 +215,4 @@ if __name__ == "__main__":
     res = aggregate_experiments(experiments)
     context = "Reporte de resultados con la columna de casos eliminada, usando average_precission_score para la optimización y scale_pos_weigth para aquellos prolapsos desbalanceados"
     generate_html_report(res, "3.current_experiment.html", context)
+
