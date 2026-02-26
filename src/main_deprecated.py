@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import pandas as pd
 import numpy as np
 from xgboost import XGBClassifier
@@ -59,6 +61,8 @@ def load_data(prolapse:int = 0):
     data,objective = df.drop(prolapses[prolapse],axis=1),df[prolapses[prolapse]]
     
     data['organ'] = data['organ'].astype('category')
+    data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame'])
+
     
     return data,objective
 
@@ -101,13 +105,12 @@ def optimal_params(trial: optuna.Trial, data = None, objective = None):
         #scores.append(recall_score(y_true=test_obj,y_pred=prediction))
     return np.mean(scores)
 
+@dataclass
 class Results:
-    def __init__(self, classif_report, conf_matrix):
-        self.classif_report = classif_report
-        self.conf_matrix = conf_matrix
-        
+    classif_report: str | dict
+    conf_matrix: np.ndarray
+    
     def __str__(self):
-        
         return f"Report:\n{self.classif_report}\nMatrix:\n{self.conf_matrix}"
     def __repr__(self):
         return self.__str__()
@@ -115,10 +118,10 @@ class Results:
 def main_func():
     res = dict()
     
-    for p in range(0,2):  # len(prolapses)-1
+    for p in range(0,len(prolapses)):
         data,objective = load_data(p)
-        groups = data["case"] #Eliminar esta columna en el entreno?
-        sgkf = StratifiedGroupKFold(n_splits=4,shuffle=True)
+        groups = data["case"]
+        sgkf = StratifiedGroupKFold(n_splits=3,shuffle=True)
         train_index, eval_index = next(sgkf.split(data, objective, groups))
         train, train_obj = data.iloc[train_index].reset_index(drop=True),objective.iloc[train_index].reset_index(drop=True)
         eval_data, eval_obj = data.iloc[eval_index].reset_index(drop=True), objective.iloc[eval_index].reset_index(drop=True)
@@ -129,20 +132,19 @@ def main_func():
         study = optuna.create_study(direction='maximize')
         study.optimize(obj, n_trials=25, n_jobs=5)
 
-        eval_grouped_by_index = group_cases_index(eval_data)
         eval_data_no_case = eval_data.drop(columns=["case"])
         
-
+        pos_weight = max(1.0,len(train_obj[train_obj==False]) / len(train_obj[train_obj==True]))
+        
         train_no_case = train.drop(columns=["case"])
         params = study.best_params
         params["enable_categorical"] = True
-        xgbc = XGBClassifier(**params)
+        xgbc = XGBClassifier(**params,scale_pos_weight=pos_weight)
         xgbc.fit(X=train_no_case,y=train_obj)
         #prediction = xgbc.predict_proba(X=eval_data)[:,1]
-        prediction = xgbc.predict(X=eval_data_no_case)
-        #final_score = average_precision_score(y_true=eval_obj,y_score=prediction)
+        prediction = xgbc.predict_proba(X=eval_data_no_case)[:,1]
 
-        grouped_pred, grouped_y = group_predictions_by_case(eval_grouped_by_index,prediction, eval_obj)
+        grouped_pred, grouped_y = group_predictions_by_case(eval_data,prediction, eval_obj)
         #Descomentar estas dos
         # report = classification_report(y_true=eval_obj,y_pred=prediction,output_dict=True)
         # conf_matrix = confusion_matrix(y_true=eval_obj,y_pred=prediction) #[[TN FP],[FN TP]]
@@ -190,29 +192,33 @@ def aggregate_experiments(experiments_list):
     return final_results
 
 
+def group_predictions_by_case(eval_data: pd.DataFrame, prediction, y: pd.Series):
+    """
+    Agrupa predicciones por caso.
+    """
+    df_temp = pd.DataFrame({
+        'case': eval_data['case'],
+        'pred': prediction,
+        'target': y
+    })
+    print(df_temp.head())
+    grouped = df_temp.groupby('case').agg({
+        'pred': 'mean',
+        'target': 'first' 
+    })
+    print(grouped.head())
+    final_preds = (grouped['pred'] >= 0.5).astype(int).values
+    final_y = grouped['target'].astype(int).values
 
-
-def group_predictions_by_case(cases_indexes: Dict, prediction, y: pd.Series):
-
-    indexes_values = cases_indexes.values()
-
-    grouped_preds = pd.Series([np.mean(prediction[case_indexes]) for case_indexes in indexes_values])
-    grouped_y = pd.Series([int(np.mean(y.iloc[case_indexes])) for case_indexes in indexes_values])
-    # print(cases_indexes.keys())
-    # print("#"*10)
-    # print(grouped_preds)
-    # print("#"*10)
-    # print(grouped_y)
-
-    return np.where(grouped_preds>=0.5,1,0), grouped_y
+    return final_preds, final_y
 
 
 if __name__ == "__main__":
     experiments = []
-    for i in range(0,2):
+    for i in range(0,1):
         experiments.append(main_func())
 
     res = aggregate_experiments(experiments)
-    context = "Reporte de resultados con la columna de casos eliminada, usando average_precission_score para la optimización y scale_pos_weigth para aquellos prolapsos desbalanceados"
-    generate_html_report(res, "3.current_experiment.html", context)
+    context = "Reporte de resultados una repeticion con la columna de casos, nhc y frames eliminadas, usando average_precission_score para la optimización y sin aplicar scale_pos_weigth para aquellos prolapsos desbalanceados"
+    generate_html_report(res, "1_nocolums_ap_nospw.html", context)
 
