@@ -9,10 +9,8 @@ from schemas import Results
 def average_classification_reports(reports):
     """
     Calcula la media de múltiples classification reports.
-    
     Args:
         reports: Lista de diccionarios con classification reports
-    
     Returns:
         dict: Classification report con valores promediados
     """
@@ -24,7 +22,7 @@ def average_classification_reports(reports):
     
     for key in keys:
         if key == 'accuracy':
-            # La accuracy es un valor simple
+            # La accuracy es un valor simple, no necesita mayor procesamiento
             avg_report['accuracy'] = np.mean([r['accuracy'] for r in reports])
         else:
             # Para 'False', 'True', 'macro avg', 'weighted avg'
