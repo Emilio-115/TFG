@@ -52,10 +52,12 @@ prolapses = ['any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse'
                  'cervical_elongation', 'rectocele', 'enterocele']
 
 DF_PATH = 'data/case_level_feats_alltargets_v2.csv'
+DF_PATH2 = 'data/case_level_feats_alltargets_w30.csv'
+DF_PATH3 = 'data/case_level_feats_alltargets_w90.csv'
 
 def load_data(prolapse:int = 0):
     ignored_obj = np.delete(prolapses, [prolapse])
-    df = pd.read_csv(DF_PATH, usecols=lambda col: col not in ignored_obj)
+    df = pd.read_csv(DF_PATH3, usecols=lambda col: col not in ignored_obj)
     data,objective = df.drop(prolapses[prolapse],axis=1),df[prolapses[prolapse]]
     
     data['organ'] = data['organ'].astype('category')
@@ -107,43 +109,57 @@ def optimize_params(trial: optuna.Trial, data: pd.DataFrame = None, objective: p
 
 def main_func():
     res = dict()
-    
-    for p in range(0,len(prolapses)):
-        data,objective = load_data(p)
+    for p in range(4, 5):
+        data, objective = load_data(p)
         groups = data["case"]
-        sgkf = StratifiedGroupKFold(n_splits=3,shuffle=True)
-        train_index, eval_index = next(sgkf.split(data, objective, groups))
-        train, train_obj = data.iloc[train_index].reset_index(drop=True),objective.iloc[train_index].reset_index(drop=True)
-        eval_data, eval_obj = data.iloc[eval_index].reset_index(drop=True), objective.iloc[eval_index].reset_index(drop=True)
-        
-        def obj(trial):
-            return optimize_params(trial, data=train, objective=train_obj)
+        sgkf = StratifiedGroupKFold(n_splits=3, shuffle=True)
 
-        study = optuna.create_study(direction='maximize')
-        study.optimize(obj, n_trials=50, n_jobs=5)
+        all_predictions = []
+        all_true_labels = []
+        all_eval_data = []
 
-        eval_data_no_case = eval_data.drop(columns=["case"])
-        
-        pos_weight = max(1.0,len(train_obj[train_obj==False]) / len(train_obj[train_obj==True]))
-        
-        train_no_case = train.drop(columns=["case"])
-        params = study.best_params
-        params["enable_categorical"] = True
-        xgbc = XGBClassifier(**params,scale_pos_weight=pos_weight)
-        xgbc.fit(X=train_no_case,y=train_obj)
-        #prediction = xgbc.predict_proba(X=eval_data)[:,1]
-        prediction = xgbc.predict_proba(X=eval_data_no_case)[:,1]
+        for i, (train_index, eval_index) in enumerate(sgkf.split(data, objective, groups)):
+            train = data.iloc[train_index].reset_index(drop=True)
+            train_obj = objective.iloc[train_index].reset_index(drop=True)
+            eval_data = data.iloc[eval_index].reset_index(drop=True)
+            eval_obj = objective.iloc[eval_index].reset_index(drop=True)
 
-        grouped_pred, grouped_y = group_predictions_by_case(eval_data,prediction, eval_obj)
-        #Descomentar estas dos
-        # report = classification_report(y_true=eval_obj,y_pred=prediction,output_dict=True)
-        # conf_matrix = confusion_matrix(y_true=eval_obj,y_pred=prediction) #[[TN FP],[FN TP]]
-        
-        report = classification_report(y_true=grouped_y,y_pred=grouped_pred,output_dict=True)
-        conf_matrix = confusion_matrix(y_true=grouped_y,y_pred=grouped_pred) #[[TN FP],[FN TP]]
 
-        res[prolapses[p]] = Results(report,conf_matrix)
-    print(res)
+            def obj(trial, _train = train, _train_obj=train_obj):
+                return optimize_params(trial, data=_train, objective=_train_obj)
+
+            study = optuna.create_study(direction='maximize')
+            study.optimize(obj, n_trials=25, n_jobs=5)
+
+            pos_weight = max(1.0, len(train_obj[train_obj == False]) / len(train_obj[train_obj == True]))
+            train_no_case = train.drop(columns=["case"])
+            params = study.best_params
+            params["enable_categorical"] = True
+
+            xgbc = XGBClassifier(**params, scale_pos_weight=pos_weight)
+            xgbc.fit(X=train_no_case, y=train_obj)
+
+            eval_data_no_case = eval_data.drop(columns=["case"])
+            prediction = xgbc.predict_proba(X=eval_data_no_case)[:, 1]
+
+            all_predictions.append(prediction)
+            all_eval_data.append(eval_data)
+            all_true_labels.append(eval_obj)
+
+        combined_predictions = np.concatenate(all_predictions)
+        combined_eval_data = pd.concat(all_eval_data).reset_index(drop=True)
+        combined_true_labels = pd.concat(all_true_labels).reset_index(drop=True)
+
+        grouped_pred, grouped_y = group_predictions_by_case(
+            combined_eval_data, combined_predictions, combined_true_labels
+        )
+        print(xgbc.feature_importances_)
+        report = classification_report(y_true=grouped_y, y_pred=grouped_pred, output_dict=True)
+        conf_matrix = confusion_matrix(y_true=grouped_y, y_pred=grouped_pred)
+
+        res[prolapses[p]] = Results(report, conf_matrix)
+        print(f"{prolapses[p]}: {res[prolapses[p]]}")
+
     return res
 
 
@@ -153,6 +169,6 @@ if __name__ == "__main__":
         experiments.append(main_func())
 
     res = aggregate_experiments(experiments)
-    context = "Reporte de resultados una repeticion con la columna de casos, nhc y frames eliminadas, usando average_precission_score para la optimización y sin aplicar scale_pos_weigth para aquellos prolapsos desbalanceados"
-    generate_html_report(res, "test.html", context)
+    context = "Reporte de resultados una repeticion con la columna de casos, nhc y frames eliminadas, usando average_precission_score para la optimización y aplicando scale_pos_weigth para aquellos prolapsos desbalanceados y los datos usando una ventana de 90 en su generación(paso 30)."
+    generate_html_report(res, "1_group_nocolumns_ap_spw_w90.html", context)
 
