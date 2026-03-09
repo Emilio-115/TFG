@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import os
+from typing import Dict
+
+from schemas import Results
 
 def _matrix_to_base64(matrix, title):
     """Genera la imagen de la matriz y la codifica en base64."""
@@ -22,14 +25,10 @@ def _matrix_to_base64(matrix, title):
     plt.close()
     return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-def generate_html_report(results, file_name="reporte_final.html", context=""):
-    """
-    Genera el reporte en results/base compatible con la clase Results y diccionarios.
-    """
+def generate_html_report(results:Dict[str,Results], file_name="reporte_final.html", context=""):
     if not file_name.lower().endswith(".html"):
         file_name += ".html"
 
-    # Ruta absoluta para Windows (evita problemas con espacios en rutas de TFG)
     destiny_path = os.path.join(os.getcwd(), "results", "base")
     os.makedirs(destiny_path, exist_ok=True)
     full_path = os.path.join(destiny_path, file_name)
@@ -58,17 +57,43 @@ def generate_html_report(results, file_name="reporte_final.html", context=""):
     """
 
     for prolapse, result in results.items():
-        # Lógica para extraer datos si es objeto Results o Diccionario
+
         if hasattr(result, 'conf_matrix'):
             matrix = result.conf_matrix
             report = result.classif_report
+            ap_0 = result.ap_0
+            ap_1 = result.ap_1
+            roc_auc_0 = result.roc_auc_0
+            roc_auc_1 = result.roc_auc_1
         else:
-            # Fallback por si en algún momento vuelves a usar diccionarios
             matrix = result.get('Matrix') or result.get('conf_matrix')
             report = result.get('Report') or result.get('classif_report')
+            ap_0 = result.get("ap_0")
+            ap_1 = result.get("ap_1")
+            roc_auc_0 = result.get("roc_auc_0")
+            roc_auc_1 = result.get("roc_auc_1")
 
         img_str = _matrix_to_base64(matrix, prolapse)
+
         df_reporte = pd.DataFrame(report).transpose().round(5)
+
+
+
+        df_reporte["average_precision"] = np.nan
+        df_reporte["roc_auc"] = np.nan
+
+        idx_str = df_reporte.index.astype(str)
+
+        if "0" in idx_str.values:
+            row0 = df_reporte.index[idx_str == "0"][0]
+            df_reporte.loc[row0, "average_precision"] = round(ap_0, 5)
+            df_reporte.loc[row0, "roc_auc"] = round(roc_auc_0, 5)
+
+        if "1" in idx_str.values:
+            row1 = df_reporte.index[idx_str == "1"][0]
+            df_reporte.loc[row1, "average_precision"] = round(ap_1, 5)
+            df_reporte.loc[row1, "roc_auc"] = round(roc_auc_1, 5)
+
         title = prolapse.replace('_', ' ').upper()
 
         html += f"""
@@ -89,5 +114,5 @@ def generate_html_report(results, file_name="reporte_final.html", context=""):
 
     with open(full_path, "w", encoding="utf-8") as f:
         f.write(html)
-    
+
     print(f"✅ Reporte guardado en: {full_path}")

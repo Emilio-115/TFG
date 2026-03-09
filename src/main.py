@@ -153,22 +153,26 @@ def main_func():
         grouped_pred, grouped_y = group_predictions_by_case(
             combined_eval_data, combined_predictions, combined_true_labels
         )
-        print(xgbc.feature_importances_)
-        report = classification_report(y_true=grouped_y, y_pred=grouped_pred, output_dict=True)
-        conf_matrix = confusion_matrix(y_true=grouped_y, y_pred=grouped_pred)
-
-        res[prolapses[p]] = Results(report, conf_matrix)
+        
+        res[prolapses[p]] = obtain_final_metrics(y_true=grouped_y,y_pred=grouped_pred)
         print(f"{prolapses[p]}: {res[prolapses[p]]}")
 
     return res
 
 
-if __name__ == "__main__":
-    experiments = []
-    for i in range(0,1):
-        experiments.append(main_func())
+def obtain_final_metrics(y_true,y_pred):
+    report = classification_report(y_true=y_true, y_pred=y_pred, output_dict=True)
+    conf_matrix = confusion_matrix(y_true=y_true, y_pred=y_pred)
+    ap_1 = average_precision_score(y_true=y_true,y_score=y_pred)
+    ap_0 = average_precision_score(1 - y_true, 1 - y_pred)
+    roc_auc_1 = roc_auc_score(y_true=y_true,y_score=y_pred)
+    roc_auc_0 = roc_auc_score(y_true=1-y_true,y_score=1-y_pred)
+    return Results(classif_report=report,conf_matrix=conf_matrix,ap_0=ap_0,ap_1=ap_1,roc_auc_0=roc_auc_0,roc_auc_1=roc_auc_1)
 
-    res = aggregate_experiments(experiments)
+
+if __name__ == "__main__":
+    experiment = main_func()
+
     context = "Reporte de resultados una repeticion con la columna de casos, nhc y frames eliminadas, usando average_precission_score para la optimización y aplicando scale_pos_weigth para aquellos prolapsos desbalanceados y los datos usando una ventana de 90 en su generación(paso 30)."
-    generate_html_report(res, "1_group_nocolumns_ap_spw_w90.html", context)
+    generate_html_report(experiment, "test_all_metrics.html", context)
 
