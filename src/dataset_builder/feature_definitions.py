@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import combinations
 from collections import namedtuple
-from config import ORGANS
+from .config import ORGANS
 from skimage.measure import label, regionprops
 
 Point = namedtuple('Point', ['x','y'])
