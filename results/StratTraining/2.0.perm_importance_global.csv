@@ -1,0 +1,187 @@
+feature,importance_mean
+4.36_eucl_dist_Urethra_Vagina_max,0.02320374417354611
+4.16_eucl_dist_Anus_Vagina_max,0.020668047835146836
+4.10_eucl_dist_Anus_Bladder_max,0.019225823275752042
+4.13_eucl_dist_Anus_Rectum_mean,0.01860906046062387
+4.14_eucl_dist_Anus_Urethra_max,0.011832318748823546
+4.15_eucl_dist_Anus_Uterus_min,0.011048176826567486
+4.20_eucl_dist_Bladder_Urethra_std,0.009356589180616789
+4.37_eucl_dist_Uterus_Vagina_min,0.008567226461785416
+4.18_eucl_dist_Bladder_Pubis_min,0.008092977998101925
+4.26_eucl_dist_Levator ani muscle_Uterus_mean,0.007187616227124842
+4.14_eucl_dist_Anus_Urethra_mean,0.006716922805469713
+4.11_eucl_dist_Anus_Levator ani muscle_max,0.006592848485418572
+4.13_eucl_dist_Anus_Rectum_min,0.006285363084177555
+4.18_eucl_dist_Bladder_Pubis_max,0.0055584069435190946
+4.34_eucl_dist_Rectum_Vagina_mean,0.005457067395176889
+4.16_eucl_dist_Anus_Vagina_mean,0.00529927653749175
+4.18_eucl_dist_Bladder_Pubis_mean,0.004982947597606767
+4.15_eucl_dist_Anus_Uterus_mean,0.004982413592726757
+4.30_eucl_dist_Pubis_Uterus_max,0.004961456437641395
+4.12_eucl_dist_Anus_Pubis_mean,0.004888717429056578
+4.19_eucl_dist_Bladder_Rectum_mean,0.004492249378395093
+4.32_eucl_dist_Rectum_Urethra_max,0.004451510716248153
+4.26_eucl_dist_Levator ani muscle_Uterus_min,0.00444466606297206
+4.25_eucl_dist_Levator ani muscle_Urethra_max,0.004441608203843054
+4.33_eucl_dist_Rectum_Uterus_min,0.004224767099138244
+4.34_eucl_dist_Rectum_Vagina_min,0.004215019698913412
+4.13_eucl_dist_Anus_Rectum_std,0.004144631565169822
+4.36_eucl_dist_Urethra_Vagina_mean,0.004142633020304147
+4.30_eucl_dist_Pubis_Uterus_min,0.004023603400279836
+4.14_eucl_dist_Anus_Urethra_min,0.0038985632481579866
+4.17_eucl_dist_Bladder_Levator ani muscle_max,0.0038115919768013876
+4.31_eucl_dist_Pubis_Vagina_max,0.003802422169995573
+4.20_eucl_dist_Bladder_Urethra_min,0.003748265563371224
+4.25_eucl_dist_Levator ani muscle_Urethra_min,0.003743234946046733
+4.36_eucl_dist_Urethra_Vagina_min,0.0035007097414628654
+4.12_eucl_dist_Anus_Pubis_max,0.0034968658379869845
+4.33_eucl_dist_Rectum_Uterus_max,0.003106515711836489
+4.19_eucl_dist_Bladder_Rectum_min,0.0030044242185758283
+4.30_eucl_dist_Pubis_Uterus_std,0.002793860407449055
+4.34_eucl_dist_Rectum_Vagina_max,0.002717305248960395
+4.29_eucl_dist_Pubis_Urethra_mean,0.002609381136991634
+4.10_eucl_dist_Anus_Bladder_mean,0.0022633876718351317
+4.16_eucl_dist_Anus_Vagina_std,0.002258124397690374
+4.17_eucl_dist_Bladder_Levator ani muscle_min,0.002242186495702072
+4.23_eucl_dist_Levator ani muscle_Pubis_mean,0.002208011123066651
+4.24_eucl_dist_Levator ani muscle_Rectum_mean,0.002186501753474135
+4.19_eucl_dist_Bladder_Rectum_max,0.0021654736279348406
+4.27_eucl_dist_Levator ani muscle_Vagina_std,0.002154680050698511
+4.24_eucl_dist_Levator ani muscle_Rectum_max,0.0020918255316902676
+4.34_eucl_dist_Rectum_Vagina_std,0.002052163886789888
+4.29_eucl_dist_Pubis_Urethra_max,0.001957407302573241
+4.11_eucl_dist_Anus_Levator ani muscle_mean,0.0019396389795434202
+4.13_eucl_dist_Anus_Rectum_max,0.001887256168699494
+4.11_eucl_dist_Anus_Levator ani muscle_std,0.0018693083246552737
+4.17_eucl_dist_Bladder_Levator ani muscle_mean,0.0016860221269662569
+4.25_eucl_dist_Levator ani muscle_Urethra_mean,0.0015686047180887375
+4.27_eucl_dist_Levator ani muscle_Vagina_max,0.0015411508499606208
+4.37_eucl_dist_Uterus_Vagina_mean,0.0015335456044092625
+4.28_eucl_dist_Pubis_Rectum_std,0.0015203520305334087
+4.22_eucl_dist_Bladder_Vagina_max,0.0014981825575323844
+4.26_eucl_dist_Levator ani muscle_Uterus_max,0.0014640579863365866
+4.15_eucl_dist_Anus_Uterus_max,0.0014264350251871518
+4.35_eucl_dist_Urethra_Uterus_std,0.0014127665030745525
+4.31_eucl_dist_Pubis_Vagina_std,0.0013758678010117337
+4.11_eucl_dist_Anus_Levator ani muscle_min,0.0013737969349348089
+4.21_eucl_dist_Bladder_Uterus_mean,0.0013626226094962464
+4.35_eucl_dist_Urethra_Uterus_mean,0.0013088376314387023
+4.27_eucl_dist_Levator ani muscle_Vagina_min,0.0012969668840975025
+4.31_eucl_dist_Pubis_Vagina_mean,0.0012968962891378767
+4.37_eucl_dist_Uterus_Vagina_std,0.0012960771238190291
+4.21_eucl_dist_Bladder_Uterus_std,0.0012892603178646597
+4.15_eucl_dist_Anus_Uterus_std,0.00126474417776984
+4.20_eucl_dist_Bladder_Urethra_max,0.0012512062093873078
+4.12_eucl_dist_Anus_Pubis_std,0.0012317757439531782
+4.23_eucl_dist_Levator ani muscle_Pubis_max,0.0011981022231164285
+4.27_eucl_dist_Levator ani muscle_Vagina_mean,0.0011897131365729504
+4.24_eucl_dist_Levator ani muscle_Rectum_min,0.0011704662990922664
+4.18_eucl_dist_Bladder_Pubis_std,0.001151838845821226
+4.22_eucl_dist_Bladder_Vagina_std,0.0011148865133496998
+4.35_eucl_dist_Urethra_Uterus_max,0.0011026539862534516
+4.16_eucl_dist_Anus_Vagina_min,0.0010996733195451263
+4.32_eucl_dist_Rectum_Urethra_mean,0.0009634770668129478
+4.20_eucl_dist_Bladder_Urethra_mean,0.0008233310759950147
+4.17_eucl_dist_Bladder_Levator ani muscle_std,0.0008156546077540449
+4.14_eucl_dist_Anus_Urethra_std,0.0007525538737758212
+4.24_eucl_dist_Levator ani muscle_Rectum_std,0.0007461937625527417
+4.33_eucl_dist_Rectum_Uterus_mean,0.0007458528751404681
+4.28_eucl_dist_Pubis_Rectum_mean,0.0006137541184019641
+4.33_eucl_dist_Rectum_Uterus_std,0.0005903725183730899
+4.21_eucl_dist_Bladder_Uterus_min,0.0005882670968904713
+4.10_eucl_dist_Anus_Bladder_std,0.0005419377418090763
+4.30_eucl_dist_Pubis_Uterus_mean,0.0005198715308757379
+4.26_eucl_dist_Levator ani muscle_Uterus_std,0.0004883060464243162
+4.31_eucl_dist_Pubis_Vagina_min,0.0004303167782102684
+4.37_eucl_dist_Uterus_Vagina_max,0.0004131412328518673
+4.28_eucl_dist_Pubis_Rectum_min,0.0003934320379151704
+2.1_region_conf_mean_mean,0.00031230595437436895
+4.36_eucl_dist_Urethra_Vagina_std,0.0002668008162241606
+4.12_eucl_dist_Anus_Pubis_min,0.0002395448182742555
+4.28_eucl_dist_Pubis_Rectum_max,0.00015285918479826237
+3.2_region_coords_centroid_X_std,0.00011796745725695298
+2.1_region_conf_mean_min,0.00011625420183039872
+2.1_region_conf_mean_max,7.134074483414954e-05
+1.3_frame_conf_max_mean,5.398575779157742e-05
+1.4_frame_conf_min_mean,3.628728193453755e-05
+3.3_region_coords_max_Y_min,6.66974048545353e-06
+1.2_frame_conf_std_std,6.566977371134731e-06
+3.6_region_coords_min_X_std,4.301884924569807e-06
+1.3_frame_conf_max_max,4.285393476629225e-06
+2.2_region_conf_std_min,3.361208591781023e-06
+1.4_frame_conf_min_std,1.7355494563133156e-06
+2.3_region_conf_max_std,2.9941484082772805e-07
+3.5_region_coords_min_Y_std,1.6241820648727714e-08
+1.1_frame_conf_mean_min,0.0
+2.2_region_conf_std_std,0.0
+1.2_frame_conf_std_max,0.0
+1.1_frame_conf_mean_std,0.0
+1.2_frame_conf_std_min,0.0
+1.2_frame_conf_std_mean,0.0
+3.1_region_coords_centroid_Y_mean,0.0
+2.4_region_conf_min_mean,0.0
+2.3_region_conf_max_mean,0.0
+1.1_frame_conf_mean_max,0.0
+1.3_frame_conf_max_min,0.0
+1.1_frame_conf_mean_mean,0.0
+organ,0.0
+5.1_eccentricity_skimage_max,0.0
+5.1_eccentricity_skimage_mean,0.0
+3.9_region_coords_bbox_area_max,0.0
+organ_num,0.0
+3.8_region_coords_len_X_min,0.0
+3.8_region_coords_len_X_std,0.0
+3.7_region_coords_len_Y_min,0.0
+3.8_region_coords_len_X_mean,0.0
+3.9_region_coords_bbox_area_min,0.0
+3.4_region_coords_max_X_min,0.0
+3.5_region_coords_min_Y_min,0.0
+3.7_region_coords_len_Y_max,0.0
+2.4_region_conf_min_std,0.0
+3.1_region_coords_centroid_Y_min,0.0
+3.1_region_coords_centroid_Y_max,0.0
+3.3_region_coords_max_Y_mean,0.0
+3.2_region_coords_centroid_X_max,0.0
+3.2_region_coords_centroid_X_mean,0.0
+3.2_region_coords_centroid_X_min,0.0
+3.3_region_coords_max_Y_max,0.0
+2.3_region_conf_max_min,0.0
+3.4_region_coords_max_X_mean,0.0
+3.5_region_coords_min_Y_max,0.0
+3.5_region_coords_min_Y_mean,0.0
+3.4_region_coords_max_X_max,0.0
+3.6_region_coords_min_X_max,0.0
+3.6_region_coords_min_X_min,0.0
+3.6_region_coords_min_X_mean,0.0
+3.8_region_coords_len_X_max,0.0
+3.9_region_coords_bbox_area_mean,0.0
+3.7_region_coords_len_Y_std,0.0
+3.9_region_coords_bbox_area_std,-1.0573552615477682e-18
+2.4_region_conf_min_min,-4.229421046191073e-18
+1.3_frame_conf_max_std,-7.93016446160826e-18
+3.3_region_coords_max_Y_std,-8.458842092382146e-18
+2.1_region_conf_mean_std,-3.051980632799777e-07
+3.7_region_coords_len_Y_mean,-3.166171362735062e-07
+2.4_region_conf_min_max,-3.4968420368578873e-07
+5.1_eccentricity_skimage_min,-4.048950598890491e-07
+3.4_region_coords_max_X_std,-8.202817677459614e-07
+2.2_region_conf_std_max,-1.0681202335790135e-06
+5.1_eccentricity_skimage_std,-1.5668662316963606e-06
+2.2_region_conf_std_mean,-1.945466021929005e-06
+3.1_region_coords_centroid_Y_std,-5.144548773858414e-06
+2.3_region_conf_max_max,-6.4827664370986905e-06
+4.35_eucl_dist_Urethra_Uterus_min,-7.119896727383844e-05
+1.4_frame_conf_min_min,-0.00012616876499507105
+1.4_frame_conf_min_max,-0.00014619051886474482
+4.29_eucl_dist_Pubis_Urethra_min,-0.0001859670374091829
+4.22_eucl_dist_Bladder_Vagina_mean,-0.000388174534420402
+4.19_eucl_dist_Bladder_Rectum_std,-0.00041993106250395293
+4.21_eucl_dist_Bladder_Uterus_max,-0.0005327471829752893
+4.29_eucl_dist_Pubis_Urethra_std,-0.0005870018063622784
+4.10_eucl_dist_Anus_Bladder_min,-0.0008201675307339584
+4.32_eucl_dist_Rectum_Urethra_std,-0.0008786705150649399
+4.32_eucl_dist_Rectum_Urethra_min,-0.0008888471848209594
+4.25_eucl_dist_Levator ani muscle_Urethra_std,-0.0008947267447608808
+4.23_eucl_dist_Levator ani muscle_Pubis_min,-0.0018466584441682314
+4.23_eucl_dist_Levator ani muscle_Pubis_std,-0.0018672093500213432
+4.22_eucl_dist_Bladder_Vagina_min,-0.003198396201144321
