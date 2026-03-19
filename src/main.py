@@ -1,10 +1,10 @@
 import pandas as pd
 import numpy as np
 from xgboost import XGBClassifier
-from sklearn.model_selection import cross_validate, StratifiedGroupKFold
-from sklearn.metrics import roc_auc_score,average_precision_score,classification_report, confusion_matrix, recall_score
+from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.metrics import roc_auc_score,average_precision_score,classification_report, confusion_matrix
 import optuna
-from dataset_builder.feature_definitions import COL_SELECTION
+from dataset_builder.feature_definitions import COL_SELECTION, COLS_DROP_ALL_NEW_EXCEPT_TOP10, COLS_TO_DROP
 from register_data import generate_html_report
 from typing import List, Dict
 from aggregations import  group_predictions_by_case
@@ -21,13 +21,14 @@ DF_PATH2 = 'data/case_level_feats_alltargets_w30.csv'
 DF_PATH3 = 'data/case_level_feats_alltargets_w90.csv'
 DF_PATH4 = "data/case_level_feats_alltargets_w60_s30_v3.csv"
 
+
 def load_data(prolapse:int = 0):
     ignored_obj = np.delete(prolapses, [prolapse])
     df = pd.read_csv(DF_PATH4, usecols=lambda col: col not in ignored_obj)
     data,objective = df.drop(prolapses[prolapse],axis=1),df[prolapses[prolapse]]
     
     data['organ'] = data['organ'].astype('category')
-    data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame'])
+    data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame']+ COLS_DROP_ALL_NEW_EXCEPT_TOP10)
 
     
     return data,objective
@@ -75,6 +76,8 @@ def optimize_params(trial: optuna.Trial, data: pd.DataFrame = None, objective: p
 
 def main_func():
     res = dict()
+    all_perm_importances = {p: [] for p in prolapses}
+
     for p in range(0, len(prolapses)):
         data, objective = load_data(p)
         groups = data["case"]
@@ -108,6 +111,24 @@ def main_func():
             eval_data_no_case = eval_data.drop(columns=["case"])
             prediction = xgbc.predict_proba(X=eval_data_no_case)[:, 1]
 
+            # PERMUTATIONS
+
+            perm_result = permutation_importance(
+                xgbc, eval_data_no_case, eval_obj,
+                n_repeats=10,
+                random_state=42,
+                scoring='average_precision'
+            )
+            fold_imp = pd.DataFrame({
+                'feature': eval_data_no_case.columns,
+                'importance_mean': perm_result.importances_mean,
+                'importance_std': perm_result.importances_std
+            })
+            all_perm_importances[prolapses[p]].append(fold_imp)
+
+            ######################
+
+
             all_predictions.append(prediction)
             all_eval_data.append(eval_data)
             all_true_labels.append(eval_obj)
@@ -123,8 +144,24 @@ def main_func():
         res[prolapses[p]] = obtain_final_metrics(y_true=grouped_y,y_pred=grouped_pred)
         print(f"{prolapses[p]}: {res[prolapses[p]]}")
 
+
+    save_permutation_importance(all_perm_importances)
     return res
 
+def save_permutation_importance(all_perm_importances: dict):
+    rows = []
+    for fold_imps in all_perm_importances.values():
+        rows.extend(fold_imps)
+    global_imp = (
+        pd.concat(rows)
+        .groupby('feature')
+        .agg(importance_mean=('importance_mean', 'mean'),
+             importance_std=('importance_mean', 'std'))
+        .sort_values('importance_mean', ascending=False)
+        .reset_index()
+    )
+    global_imp.to_csv('data/add_top10_perm_importance.csv', index=False)
+    print("Permutation importance guardada.")
 
 def obtain_final_metrics(y_true,y_pred):
     report = classification_report(y_true=y_true, y_pred=y_pred, output_dict=True)
@@ -139,6 +176,6 @@ def obtain_final_metrics(y_true,y_pred):
 if __name__ == "__main__":
     experiment = main_func()
 
-    context = "Reporte de resultados una repeticion con la columna de casos, nhc y frames eliminadas, usando average_precission_score para la optimización y aplicando scale_pos_weigth para aquellos prolapsos desbalanceados y los datos usando una ventana de 90 en su generación(paso 30)."
-    generate_html_report(experiment, "test_all_metrics2.html", context)
+    context = "Reporte de resultados con las variables originales, ventana 60 step 30 y las 10 variables distancia más aportantes."
+    generate_html_report(experiment, "Borrar.html", context)
 

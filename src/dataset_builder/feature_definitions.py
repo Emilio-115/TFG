@@ -126,6 +126,7 @@ COL_SELECTION = ['case', 'nhc_final', 'start_frame', 'end_frame', 'organ', 'orga
                  '3.9_region_coords_bbox_area_std', '3.9_region_coords_bbox_area_max',
                  '3.9_region_coords_bbox_area_min'] + spatial_col_selection + frame_shape_col_selection
 
+DROP_NEW = spatial_col_selection + frame_shape_col_selection
 
 COLS_TO_DROP = [
     '1.1_frame_conf_mean_mean', '1.1_frame_conf_mean_std', '1.1_frame_conf_mean_max', '1.1_frame_conf_mean_min',
