@@ -1,5 +1,5 @@
-from dataset_builder.features_builder import build_dataset
-from dataset_builder.feature_definitions import COL_SELECTION, NEW_FEATS
+from .features_builder import build_dataset
+from .feature_definitions import COL_SELECTION, NEW_FEATS
 
 def main():
 

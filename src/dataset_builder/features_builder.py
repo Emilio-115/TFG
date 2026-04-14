@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.preprocessing import OrdinalEncoder
-from dataset_builder.config import ORGANS, ORGAN_COL, ORGAN_COL_NUM, TARGET_PATH, SEGMENTS_PATH
-from dataset_builder.frame_features import create_agg_df
+from .config import ORGANS, ORGAN_COL, ORGAN_COL_NUM, TARGET_PATH, SEGMENTS_PATH
+from .frame_features import create_agg_df
 
 
 def build_dataset(window_size=90, window_step=30):

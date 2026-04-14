@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 
-from dataset_builder.config import ORGANS
-from dataset_builder.feature_definitions import (
+from .config import ORGANS
+from .feature_definitions import (
     FRAME_CONF_STATS,
     REGION_CONF_STATS,
     REGION_COORDS_STATS,
