@@ -4,7 +4,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from schemas import Results
+from .schemas import Results
 
 def average_classification_reports(reports):
     """

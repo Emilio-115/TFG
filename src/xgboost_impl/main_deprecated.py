@@ -2,14 +2,14 @@ from dataclasses import dataclass
 
 import pandas as pd
 import numpy as np
-from xgboost import XGBClassifier
+from xgboost_impl import XGBClassifier
 from sklearn.model_selection import cross_validate, StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score,average_precision_score,classification_report, confusion_matrix, recall_score
 import optuna
-from register_data import generate_html_report
+from xgboost_impl.register_data import generate_html_report
 from typing import List, Dict
 from collections import defaultdict
-from aggregations import group_cases_index,average_classification_reports
+from xgboost_impl.aggregations import group_cases_index,average_classification_reports
 
 col_selection = ['case', 'nhc_final', 'start_frame', 'end_frame', 'organ', 'organ_num', 
                  'any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse', 

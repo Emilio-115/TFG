@@ -7,7 +7,9 @@ import base64
 import os
 from typing import Dict
 
-from schemas import Results
+from .schemas import Results
+
+
 
 def _matrix_to_base64(matrix, title):
     """Genera la imagen de la matriz y la codifica en base64."""
