@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-IMPORTANCE_DIR = Path('./results/importance')
-FILE_PATTERN = 'importance_todas_{experiment}.csv'  # ajusta el sufijo si cambia
-EXPERIMENT = 'w60_s30'  # ajusta al experimento que quieras analizar
+IMPORTANCE_DIR = Path('results/importance')
+FILE_PATTERN = 'importance_todas_{experiment}_agg.csv'  
+EXPERIMENT = 'w60_s15'  
 
 def compute_score(df):
     """Score ajustado por consistencia: penaliza alta desviación relativa."""

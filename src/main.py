@@ -4,13 +4,14 @@ from xgboost import XGBClassifier
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score, average_precision_score, classification_report, confusion_matrix
 import optuna
-from dataset_builder.feature_definitions import COL_SELECTION, COLS_DROP_ALL_NEW_EXCEPT_TOP10, COLS_TO_DROP, NEW_FEATS
+from dataset_builder.feature_definitions import COL_SELECTION, NEW_FEATS
 from register_data import generate_html_report
 from aggregations import group_predictions_by_case
 from schemas import Results
 from sklearn.inspection import permutation_importance
 from datetime import datetime
 import os
+from pathlib import Path
 
 drop_selection = []
 prolapses = ['any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse',
@@ -19,19 +20,55 @@ DF_PATH = 'data/case_level_feats_alltargets_v2.csv'
 save_perm_name = "importance"
 
 
-def load_data(prolapse: int = 0):
-    ignored_obj = np.append(np.delete(prolapses, [prolapse]),["nhc_final", 'start_frame', 'end_frame'],axis=None)
-    print(ignored_obj)
+#def load_data(prolapse: int = 0):
+#    ignored_obj = np.delete(prolapses, [prolapse])
+#    df = pd.read_csv(DF_PATH, usecols=lambda col: col not in ignored_obj)
+#    data, objective = df.drop(prolapses[prolapse], axis=1), df[prolapses[prolapse]]
+#    data['organ'] = data['organ'].astype('category')
+#    data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame'] + drop_selection)
+#    return data, objective
+
+RANKINGS_DIR = 'results/importance/rankings'
+
+def load_data(prolapse: int = 0, use_top_n: int = None,add_top_n: int = None):
+    prolapse_name = prolapses[prolapse]
+    ignored_obj = np.delete(prolapses, [prolapse])
     df = pd.read_csv(DF_PATH, usecols=lambda col: col not in ignored_obj)
-    data, objective = df.drop(prolapses[prolapse], axis=1), df[prolapses[prolapse]]
+    data, objective = df.drop(prolapse_name, axis=1), df[prolapse_name]
     data['organ'] = data['organ'].astype('category')
-    # data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame'] + drop_selection)
+    
+
+    if use_top_n is not None:
+        ranking_path = Path(RANKINGS_DIR) / prolapse_name / f'ranking_w60_s15.csv'
+        if ranking_path.exists():
+            ranking = pd.read_csv(ranking_path)
+            top_features = set(ranking.head(use_top_n)['feature'])
+
+            meta_cols = {'case', 'organ'}
+            cols_to_keep = [c for c in data.columns if c in top_features or c in meta_cols]
+            data = data[cols_to_keep]
+            print(f"    {prolapse_name}: {len(cols_to_keep) - len(meta_cols)} features cargadas desde ranking")
+        else:
+            print(f"    WARNING: ranking no encontrado en {ranking_path}, usando todas las features")
+    elif add_top_n is not None:
+        data = data[[c for c in COL_SELECTION if c not in prolapses]] #Añadida para coger originales más top 10
+        ranking_path = Path(RANKINGS_DIR) / prolapse_name / f'ranking_w60_s15.csv'
+        if ranking_path.exists():
+            ranking = pd.read_csv(ranking_path)
+            top_features = set(ranking.head(add_top_n)['feature'])
+
+            cols_to_add = [c for c in top_features if c in df.columns and c not in data.columns]
+            if cols_to_add:
+                data = pd.concat([data, df[cols_to_add]], axis=1)
+            print(f"    {prolapse_name}: {len(cols_to_add)} features nuevas añadidas desde ranking top{add_top_n}")
+        else:
+            print(f"    WARNING: ranking no encontrado en {ranking_path}, usando todas las features")
+                
+    data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame', 'organ_num'] + drop_selection)
     return data, objective
 
 
 def optimize_params(trial: optuna.Trial, data: pd.DataFrame = None, objective: pd.Series = None):
-    if data is None or objective is None:
-        data, objective = load_data()
 
     sgkf = StratifiedGroupKFold(n_splits=3, shuffle=True)
     groups = data["case"]
@@ -68,11 +105,11 @@ def optimize_params(trial: optuna.Trial, data: pd.DataFrame = None, objective: p
 def run_experiment(target_prolapses: list[str]):
     res = dict()
     all_perm_importances = {p: [] for p in target_prolapses}
-
+    
     for prolapse_name in target_prolapses:
         p = prolapses.index(prolapse_name)
         print(f"\n  · {prolapse_name} | {datetime.now()}")
-        data, objective = load_data(p)
+        data, objective = load_data(p,add_top_n = 10)
         groups = data["case"]
         sgkf = StratifiedGroupKFold(n_splits=3, shuffle=True)
 
@@ -138,17 +175,19 @@ def run_experiment(target_prolapses: list[str]):
 
 def save_permutation_importance(all_perm_importances: dict):
     for prolapse_name, fold_imps in all_perm_importances.items():
-        imp = (
-            pd.concat(fold_imps)
-            .groupby('feature')
+        os.makedirs(f'results/importance/{prolapse_name}', exist_ok=True)
+
+        all_folds_df = pd.concat(fold_imps).reset_index(drop=True)
+        agg_imp = (
+            all_folds_df.groupby('feature')
             .agg(importance_mean=('importance_mean', 'mean'),
                  importance_std=('importance_mean', 'std'))
             .sort_values('importance_mean', ascending=False)
             .reset_index()
         )
-        path = f'results/importance/{prolapse_name}/{save_perm_name}.csv'
-        imp.to_csv(path, index=False)
-        print(f"  Permutation importance guardada: {path}")
+        agg_path = f'results/importance/{prolapse_name}/{save_perm_name}_agg.csv'
+        agg_imp.to_csv(agg_path, index=False)
+        print(f"  Permutation importance agregada guardada: {agg_path}")
 
 
 def obtain_final_metrics(y_true, y_pred):
@@ -163,33 +202,32 @@ def obtain_final_metrics(y_true, y_pred):
 
 
 if __name__ == "__main__":
-    load_data(0)
-
-    # dfs = {
-    #     #'w50_s25': 'data/case_level_feats_alltargets_w50_s25_v3.csv',
-    #     #'w60_s15': 'data/case_level_feats_alltargets_w60_s15_v3.csv',
-    #     #'w60_s20': 'data/case_level_feats_alltargets_w60_s20_v3.csv',
-    #     'w60_s30': 'data/case_level_feats_alltargets_w60_s30_v3.csv',
-    #     #'w70_s30': 'data/case_level_feats_alltargets_w70_s30_v3.csv'
-    # }
+    dfs = {
+        #'w50_s25': 'data/case_level_feats_alltargets_w50_s25_v3.csv',
+        'w60_s15': 'data/case_level_feats_alltargets_w60_s15_v3.csv',
+        #'w60_s20': 'data/case_level_feats_alltargets_w60_s20_v3.csv',
+        #'w60_s30': 'data/case_level_feats_alltargets_w60_s30_v3.csv',
+        #'w70_s30': 'data/case_level_feats_alltargets_w70_s30_v3.csv'
+    }
     
-    # drop_data = {
-    #     #'top80': COLS_TO_DROP,
-    #     #'original_and_top10': COLS_DROP_ALL_NEW_EXCEPT_TOP10,
-    #     #'original': DROP_NEW
-    #     'todas':[]
-    # }
-    # target_prolapses = prolapses  # o una sublista: ['cystocele', 'rectocele']
+    drop_data = {
+        #'top80': COLS_TO_DROP,
+        #'original_and_top10': COLS_DROP_ALL_NEW_EXCEPT_TOP10,
+        #'original': DROP_NEW,
+        #'todas':[],
+        'add_indiv_top10':[],
+    }
+    target_prolapses = prolapses  # o una sublista: ['cystocele', 'rectocele']
 
-    # optuna.logging.set_verbosity(optuna.logging.WARNING)
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    # for df_name, df_file in dfs.items():
-    #     for drop_name, drop_cols in drop_data.items():
-    #         print(f"\n--- Experimento: {df_name} | {drop_name} | {datetime.now()} ---")
-    #         DF_PATH = df_file
-    #         drop_selection = drop_cols
-    #         save_perm_name = f"importance_{drop_name}_{df_name}"
+    for df_name, df_file in dfs.items():
+        for drop_name, drop_cols in drop_data.items():
+            print(f"\n--- Experimento: {df_name} | {drop_name} | {datetime.now()} ---")
+            DF_PATH = df_file
+            drop_selection = drop_cols
+            save_perm_name = f"importance_{drop_name}_{df_name}"
 
-    #         experiment = run_experiment(target_prolapses)
-    #         context = f"Dataset: {df_name} | Features: {drop_name}"
-    #         generate_html_report(experiment, f"exp_{df_name}_{drop_name}.html", context)
+            experiment = run_experiment(target_prolapses)
+            context = f"Dataset: {df_name} | Features: {drop_name}"
+            generate_html_report(experiment, f"exp_{df_name}_{drop_name}.html", context)
