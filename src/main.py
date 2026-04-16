@@ -1,5 +1,6 @@
 from src.xgboost_impl.main import main as xgb_main
-from src.dataset_builder.dataset_builder import main as df_agg_main
+from src.dataset_builder.dataset_builder import main as generate_data
+from src.cnn.main import main as cnn_main
 
 def main():
     print("1. Dataset builder agg")
@@ -13,14 +14,16 @@ def main():
 
     if option == "1":
         print(f'{"#"*30+"\n"}Construyendo dataset agregado\n{"#"*30}')
-        df_agg_main()
+        generate_data()
     elif option == "2":
-        print(f'{"#"*30}\nConstruyendo dataset\n{"#"*30}')
+        print(f'{"#"*30}\nConstruyendo datos(no se almacenan)\n{"#"*30}')
+        generate_data(agg=False)
     elif option == "3":
         print(f'{"#"*30}\nEjecutando XGBoost\n{"#"*30}')
         xgb_main()
     elif option == "4":
         print(f'{"#"*30}\nEjecutando CNN\n{"#"*30}')
+        cnn_main()
     elif option == "5":
         print(f'{"#"*30}\nEjecutando LSTM\n{"#"*30}')
 
