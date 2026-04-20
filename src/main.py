@@ -1,6 +1,7 @@
 from src.xgboost_impl.main import main as xgb_main
 from src.dataset_builder.dataset_builder import main as generate_data
 from src.cnn.main import main as cnn_main
+from src.lstm.main import main as lstm_main
 
 def main():
     print("1. Dataset builder agg")
@@ -26,6 +27,7 @@ def main():
         cnn_main()
     elif option == "5":
         print(f'{"#"*30}\nEjecutando LSTM\n{"#"*30}')
+        lstm_main()
 
 if __name__ == "__main__":
     main()
