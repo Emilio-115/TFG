@@ -1,25 +1,26 @@
-import pandas as pd
-import numpy as np
-
-from keras.layers import Dense, GlobalAveragePooling1D, Input, Conv1D, BatchNormalization, ReLU, Dropout
-from keras.models import Model
-from keras.metrics import AUC
-from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping
-
-from sklearn.model_selection import StratifiedGroupKFold
-from sklearn.metrics import roc_auc_score, average_precision_score, classification_report, confusion_matrix
-
 from datetime import datetime
 from typing import List
 
-from src.xgboost_impl.register_data import generate_html_report
-from src.xgboost_impl.schemas import Results
-from src.xgboost_impl.aggregations import group_predictions_by_case
-from src.utils.scaler import scale_data
-
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from keras.callbacks import EarlyStopping
+from sklearn.metrics import (
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    roc_auc_score,
+)
+from sklearn.model_selection import StratifiedGroupKFold
+
+from src.cnn.models import make_model_res_net1D, make_model_tcn
+from src.utils.scaler import scale_data
+from src.xgboost_impl.aggregations import group_predictions_by_case
+from src.xgboost_impl.register_data import generate_html_report
+from src.xgboost_impl.schemas import Results
+from pathlib import Path
+
 
 matplotlib.use('Agg')
 
@@ -41,35 +42,6 @@ def load_data(prolapse: str = "any_prolapse", add_top_n: int = 10):
     objective = meta_df[prolapse].to_numpy()
     return data,objective,meta_df
 
-
-def make_model(input_shape):
-    inputs = Input(shape=input_shape)
-
-    # Bloque Convolucional 1 (Extracción de características de bajo nivel)
-    x = Conv1D(filters=32, kernel_size=3, padding="same")(inputs)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    x = Dropout(0.3)(x) # Previene el sobreajuste apagando neuronas aleatoriamente
-
-    # Bloque Convolucional 2 (Extracción de características complejas)
-    x = Conv1D(filters=64, kernel_size=3, padding="same")(x)
-    x = BatchNormalization()(x)
-    x = ReLU()(x)
-    x = Dropout(0.3)(x)
-
-    x = GlobalAveragePooling1D()(x)
-
-    x = Dense(32, activation="relu")(x)
-    x = Dropout(0.4)(x)     
-    outputs = Dense(1, activation="sigmoid")(x)
-    model = Model(inputs=inputs, outputs=outputs)
-    model.compile(
-        optimizer=Adam(learning_rate=0.001),
-        loss="binary_crossentropy",
-        metrics=[AUC(name='pr_auc', curve='PR')] # Esto es similar al AP
-    )
-
-    return model
 
 def obtain_final_metrics(y_true, y_pred_probs):
     # Convertimos probabilidades a clases (umbral 0.5) para el reporte
@@ -103,6 +75,7 @@ def run_experiment(target_prolapses: List[str]):
         
         for fold_idx, (train_idx, eval_idx) in enumerate(sgkf.split(data, objective, groups)):
             # Split
+            print(f"\n · CNN: {prolapse_name} | Fold {fold_idx}")
             x_train, x_eval = scale_data(data[train_idx], data[eval_idx])
             y_train, y_eval = objective[train_idx], objective[eval_idx]
             
@@ -111,8 +84,9 @@ def run_experiment(target_prolapses: List[str]):
             num_neg = len(y_train) - num_pos
             cw = {0: 1.0, 1: num_neg / num_pos if num_pos > 0 else 1.0}
 
-            model = make_model(input_shape=x_train.shape[1:])
-            
+            model = make_model_res_net1D(input_shape=x_train.shape[1:])
+            # model = make_model_tcn(input_shape=x_train.shape[1:])
+        
             history = model.fit(
                 x_train, y_train,
                 validation_data=(x_eval, y_eval),
@@ -128,7 +102,11 @@ def run_experiment(target_prolapses: List[str]):
             plt.plot(history.history['val_pr_auc'], label='Val PR-AUC')
             plt.legend()
             plt.title(f'Curvas de entrenamiento — {prolapse_name} | Fold {fold_idx}')
-            plt.savefig(f'results/training_curve_{prolapse_name}_fold{fold_idx}.png')
+
+            save_path = Path(f'results/cnn/{fold_idx}/training_curve_{prolapse_name}_fold{fold_idx}.png')
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+
+            plt.savefig(save_path)
             plt.close()
 
             probs = model.predict(x_eval, verbose=0).flatten()
@@ -161,11 +139,11 @@ def main():
 
     print(f"\n--- Iniciando Experimento CNN Comparativo: {df_name} | {drop_name} ---")
     
-    experiment_results = run_experiment([target_prolapses[3]])
+    experiment_results = run_experiment([target_prolapses[6]])
     
     # Generar reporte con tu formato
     context = f"CNN Model | Dataset: {df_name} | Features: {drop_name}"
-    report_filename = f"exp_{df_name}_{drop_name}_cnn3.html"
+    report_filename = f"exp_{df_name}_{drop_name}_cnn.html"
     
     generate_html_report(experiment_results, report_filename, context)
     print(f"\nReporte generado: {report_filename}")
