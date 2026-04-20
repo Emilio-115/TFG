@@ -7,7 +7,7 @@ import base64
 import os
 from typing import Dict
 
-from .schemas import Results
+from src.xgboost_impl.schemas import Results
 
 
 

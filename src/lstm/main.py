@@ -7,7 +7,6 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score, average_precision_score, classification_report, confusion_matrix
-from src.dataset_builder.feature_definitions import COL_SELECTION, NEW_FEATS
 from datetime import datetime
 from typing import List
 import matplotlib.pyplot as plt
