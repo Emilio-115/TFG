@@ -15,11 +15,11 @@ from sklearn.metrics import (
 from sklearn.model_selection import StratifiedGroupKFold
 
 from src.cnn.models import make_model_res_net1D, make_model_tcn
+from src.utils.plots import plot_auc_pr_evol, plot_loss, plot_pred_vs_y
 from src.utils.scaler import scale_data
 from src.xgboost_impl.aggregations import group_predictions_by_case
 from src.xgboost_impl.register_data import generate_html_report
 from src.xgboost_impl.schemas import Results
-from pathlib import Path
 
 
 matplotlib.use('Agg')
@@ -44,13 +44,11 @@ def load_data(prolapse: str = "any_prolapse", add_top_n: int = 10):
 
 
 def obtain_final_metrics(y_true, y_pred_probs):
-    # Convertimos probabilidades a clases (umbral 0.5) para el reporte
     y_pred_classes = (y_pred_probs > 0.5).astype(int)
     
     report = classification_report(y_true=y_true, y_pred=y_pred_classes, output_dict=True)
     conf_matrix = confusion_matrix(y_true=y_true, y_pred=y_pred_classes)
     
-    # Calculamos AP (Average Precision) y ROC AUC usando probabilidades
     ap_1 = average_precision_score(y_true=y_true, y_score=y_pred_probs)
     ap_0 = average_precision_score(1 - y_true, 1 - y_pred_probs)
     roc_auc_1 = roc_auc_score(y_true=y_true, y_score=y_pred_probs)
@@ -74,7 +72,6 @@ def run_experiment(target_prolapses: List[str]):
         all_fold_meta = []
         
         for fold_idx, (train_idx, eval_idx) in enumerate(sgkf.split(data, objective, groups)):
-            # Split
             print(f"\n · CNN: {prolapse_name} | Fold {fold_idx}")
             x_train, x_eval = scale_data(data[train_idx], data[eval_idx])
             y_train, y_eval = objective[train_idx], objective[eval_idx]
@@ -94,20 +91,8 @@ def run_experiment(target_prolapses: List[str]):
                 batch_size=16,
                 class_weight=cw,
                 verbose=0,
-                callbacks=[EarlyStopping(monitor='val_pr_auc', patience=10, restore_best_weights=True, mode='max')]
+                callbacks=[EarlyStopping(monitor='val_pr_auc', patience=5, restore_best_weights=True, mode='max')]
             )
-
-            plt.figure()
-            plt.plot(history.history['pr_auc'], label='Train PR-AUC')
-            plt.plot(history.history['val_pr_auc'], label='Val PR-AUC')
-            plt.legend()
-            plt.title(f'Curvas de entrenamiento — {prolapse_name} | Fold {fold_idx}')
-
-            save_path = Path(f'results/cnn/{fold_idx}/training_curve_{prolapse_name}_fold{fold_idx}.png')
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-
-            plt.savefig(save_path)
-            plt.close()
 
             probs = model.predict(x_eval, verbose=0).flatten()
             
@@ -115,16 +100,18 @@ def run_experiment(target_prolapses: List[str]):
             all_fold_true.append(y_eval)
             all_fold_meta.append(meta_df.iloc[eval_idx])
 
+
+            plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn=False)
+            plot_loss(history, prolapse_name,fold_idx)
+
         combined_probs = np.concatenate(all_fold_probs)
         combined_true = np.concatenate(all_fold_true)
         combined_meta = pd.concat(all_fold_meta).reset_index(drop=True)
 
-        # Asegúrate de que combined_meta tenga las columnas que espera group_predictions_by_case
         grouped_pred, grouped_y = group_predictions_by_case(
             combined_meta, combined_probs, combined_true
         )
 
-        # Cálculo de métricas finales (Results)
         res[prolapse_name] = obtain_final_metrics(y_true=grouped_y, y_pred_probs=grouped_pred)
         print(f"    {prolapse_name} finalizado. AP_1: {res[prolapse_name].ap_1:.4f}")
 
@@ -141,7 +128,6 @@ def main():
     
     experiment_results = run_experiment([target_prolapses[6]])
     
-    # Generar reporte con tu formato
     context = f"CNN Model | Dataset: {df_name} | Features: {drop_name}"
     report_filename = f"exp_{df_name}_{drop_name}_cnn.html"
     

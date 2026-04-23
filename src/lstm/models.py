@@ -3,10 +3,10 @@ from keras.models import Model
 from keras.metrics import AUC
 from keras.optimizers import Adam
 
-def make_bilstm(input_shape):
+def make_model_bilstm(input_shape):
     inputs = Input(shape=input_shape)
     
-    x = Bidirectional(LSTM(16, return_sequences=False))(inputs)
+    x = Bidirectional(LSTM(16, return_sequences=False, dropout=0.3, recurrent_dropout=0.3))(inputs)
     
     x = Dropout(0.5)(x)
     x = Dense(16, activation='relu')(x)

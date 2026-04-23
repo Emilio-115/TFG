@@ -9,7 +9,7 @@ def main():
     print("3. XGBoost")
     print("4. CNN")
     print("5. LSTM")
-
+    print("6. XGBoost, CNN y LSTM")
 
     option = input("Elige opción: ")
 
@@ -26,6 +26,16 @@ def main():
         print(f'{"#"*30}\nEjecutando CNN\n{"#"*30}')
         cnn_main()
     elif option == "5":
+        print(f'{"#"*30}\nEjecutando LSTM\n{"#"*30}')
+        lstm_main()
+    elif option == "6":
+        print(f'{"#"*30}\nEjecutando todas las implementaciones\n{"#"*30}')
+        print(f'{"#"*30}\nEjecutando XGBoost\n{"#"*30}')
+        xgb_main()
+
+        print(f'{"#"*30}\nEjecutando CNN\n{"#"*30}')
+        cnn_main()
+        
         print(f'{"#"*30}\nEjecutando LSTM\n{"#"*30}')
         lstm_main()
 

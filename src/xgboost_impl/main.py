@@ -40,7 +40,7 @@ def load_data(prolapse: int = 0, use_top_n: int = None,add_top_n: int = None):
     
 
     if use_top_n is not None:
-        ranking_path = Path(RANKINGS_DIR) / prolapse_name / f'ranking_w60_s15.csv'
+        ranking_path = Path(RANKINGS_DIR) / prolapse_name / 'ranking_w60_s15.csv'
         if ranking_path.exists():
             ranking = pd.read_csv(ranking_path)
             top_features = set(ranking.head(use_top_n)['feature'])
@@ -53,7 +53,7 @@ def load_data(prolapse: int = 0, use_top_n: int = None,add_top_n: int = None):
             print(f"    WARNING: ranking no encontrado en {ranking_path}, usando todas las features")
     elif add_top_n is not None:
         data = data[[c for c in COL_SELECTION if c not in prolapses]] #Añadida para coger originales más top 10
-        ranking_path = Path(RANKINGS_DIR) / prolapse_name / f'ranking_w60_s15.csv'
+        ranking_path = Path(RANKINGS_DIR) / prolapse_name / 'ranking_w60_s15.csv'
         if ranking_path.exists():
             ranking = pd.read_csv(ranking_path)
             top_features = set(ranking.head(add_top_n)['feature'])
