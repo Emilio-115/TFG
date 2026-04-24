@@ -1,0 +1,22 @@
+import keras_tuner as kt
+from typing import Callable
+import os
+
+def get_tuner(model_builder: Callable, fold_idx, prolapse_name, experiment):
+
+    BASE_DIR = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..")
+    )
+
+    tuner_dir = os.path.join(BASE_DIR, "results", experiment, "keras_tuner_results")
+    os.makedirs(tuner_dir, exist_ok=True)
+    project_name = f"{experiment}_tuner_{prolapse_name}_fold_{fold_idx}"
+
+    return kt.BayesianOptimization(
+        hypermodel=model_builder,
+        objective="val_loss",
+        max_trials=5,
+        directory=tuner_dir,
+        project_name=project_name,
+        overwrite=True
+    )
