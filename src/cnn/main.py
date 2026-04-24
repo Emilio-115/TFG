@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import List
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from keras.callbacks import EarlyStopping
@@ -12,11 +11,14 @@ from sklearn.metrics import (
     confusion_matrix,
     roc_auc_score,
 )
+
+from keras.backend import clear_session
 from sklearn.model_selection import StratifiedGroupKFold
 
 from src.cnn.models import make_model_res_net1D, make_model_tcn
-from src.utils.plots import plot_auc_pr_evol, plot_loss, plot_pred_vs_y
+from src.utils.plots import plot_auc_pr_evol, plot_loss
 from src.utils.scaler import scale_data
+from src.utils.tuner import get_tuner
 from src.xgboost_impl.aggregations import group_predictions_by_case
 from src.xgboost_impl.register_data import generate_html_report
 from src.xgboost_impl.schemas import Results
@@ -41,7 +43,6 @@ def load_data(prolapse: str = "any_prolapse", add_top_n: int = 10):
     meta_df = pd.read_csv(META_DF_PATH)
     objective = meta_df[prolapse].to_numpy()
     return data,objective,meta_df
-
 
 def obtain_final_metrics(y_true, y_pred_probs):
     y_pred_classes = (y_pred_probs > 0.5).astype(int)
@@ -80,9 +81,21 @@ def run_experiment(target_prolapses: List[str]):
             num_pos = np.sum(y_train)
             num_neg = len(y_train) - num_pos
             cw = {0: 1.0, 1: num_neg / num_pos if num_pos > 0 else 1.0}
+            input_shape=x_train.shape[1:]
 
-            model = make_model_res_net1D(input_shape=x_train.shape[1:])
+            tuner = get_tuner(lambda hp: make_model_res_net1D(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment="tcn")
+            tuner.search(x_train, y_train,
+                validation_data=(x_eval, y_eval),
+                epochs=50,
+                batch_size=16,
+                class_weight=cw,
+                verbose=0,
+                callbacks=[EarlyStopping(monitor='val_pr_auc', patience=5, restore_best_weights=True, mode='max')])
+            
+            hp = tuner.get_best_hyperparameters()[0]
+            # model = make_model_res_net1D(input_shape=x_train.shape[1:])
             # model = make_model_tcn(input_shape=x_train.shape[1:])
+            model = make_model_tcn(hp,input_shape=x_train.shape[1:])
         
             history = model.fit(
                 x_train, y_train,
@@ -103,6 +116,8 @@ def run_experiment(target_prolapses: List[str]):
 
             plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn=False)
             plot_loss(history, prolapse_name,fold_idx)
+
+            clear_session()
 
         combined_probs = np.concatenate(all_fold_probs)
         combined_true = np.concatenate(all_fold_true)
