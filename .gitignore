@@ -12,3 +12,7 @@ wheels/
 data/segments/*
 *.pdf
 *.txt
+*.json
+*.h5
+*.png
+*.html
