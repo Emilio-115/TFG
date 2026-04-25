@@ -15,8 +15,8 @@ def get_tuner(model_builder: Callable, fold_idx, prolapse_name, experiment):
     return kt.BayesianOptimization(
         hypermodel=model_builder,
         objective=kt.Objective("val_pr_auc", direction="max"),
-        max_trials=5,
+        max_trials=10,
         directory=tuner_dir,
         project_name=project_name,
-        overwrite=True
+        overwrite=False
     )

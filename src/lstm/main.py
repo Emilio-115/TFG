@@ -67,6 +67,7 @@ def run_experiment(target_prolapses: List[str]):
         all_fold_meta = []
 
         for fold_idx, (train_idx, eval_idx) in enumerate(sgkf.split(data, objective, groups)):
+            print(f"\n · LSTM: {prolapse_name} | Fold {fold_idx}")
             x_train, x_eval = scale_data(data[train_idx], data[eval_idx])
             y_train, y_eval = objective[train_idx], objective[eval_idx]
             
@@ -77,11 +78,11 @@ def run_experiment(target_prolapses: List[str]):
             input_shape=x_train.shape[1:]
 
 
-            tuner = get_tuner(lambda hp: make_model_bilstm(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment="tcn")
+            tuner = get_tuner(lambda hp: make_model_bilstm(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment="lstm")
 
             tuner.search(x_train, y_train,
                 validation_data=(x_eval, y_eval),
-                epochs=50,
+                epochs=25,
                 batch_size=16,
                 class_weight=cw,
                 verbose=0,
@@ -95,7 +96,7 @@ def run_experiment(target_prolapses: List[str]):
             history = model.fit(
                 x_train, y_train,
                 validation_data=(x_eval, y_eval),
-                epochs=50,
+                epochs=25,
                 batch_size=16,
                 class_weight=cw,
                 verbose=0,

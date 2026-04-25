@@ -93,7 +93,7 @@ def run_experiment(target_prolapses: List[str]):
             
             hp = tuner.get_best_hyperparameters()[0]
             model = make_model_tcn(hp,input_shape=input_shape)
-        
+
             history = model.fit(
                 x_train, y_train,
                 validation_data=(x_eval, y_eval),

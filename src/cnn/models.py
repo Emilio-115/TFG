@@ -95,21 +95,28 @@ def make_model_res_net1D(hp: kt.HyperParameters, input_shape):
 
 def make_model_tcn(hp, input_shape):
     inputs = Input(shape=input_shape)
-
+    DILATIONS_MAP = {
+    "small": [1, 2, 4],
+    "medium": [1, 2, 4, 8],
+    "large": [1, 2, 4, 8, 16],
+}
     # Hiperparámetros
-    nb_filters   = get_hp(hp, "tcn_filters", 32,    lambda h: h.Choice("tcn_filters", [16, 32, 64]))
-    kernel_size  = get_hp(hp, "tcn_kernel", 5,      lambda h: h.Choice("tcn_kernel", [3, 5, 7]))
-    dropout_tcn  = get_hp(hp, "tcn_dropout", 0.4,   lambda h: h.Float("tcn_dropout", 0.2, 0.5, step=0.1))
-    dropout_pool = get_hp(hp, "tcn_dropout_pool", 0.5, lambda h: h.Float("tcn_dropout_pool", 0.3, 0.6, step=0.1))
-    dropout_clf  = get_hp(hp, "tcn_dropout_clf", 0.4,  lambda h: h.Float("tcn_dropout_clf", 0.2, 0.5, step=0.1))
-    dense_units  = get_hp(hp, "tcn_dense_units", 16,   lambda h: h.Choice("tcn_dense_units", [16, 32, 64]))
-    l2_rate      = get_hp(hp, "tcn_l2", 1e-3,          lambda h: h.Float("tcn_l2", 1e-5, 1e-2, sampling="log"))
-    lr           = get_hp(hp, "tcn_lr", 5e-4,           lambda h: h.Float("tcn_lr", 1e-4, 1e-2, sampling="log"))
+    nb_filters   = get_hp(hp, 32,    lambda h: h.Choice("tcn_filters", [8, 16, 32, 64]))
+    kernel_size  = get_hp(hp, 5,      lambda h: h.Choice("tcn_kernel", [3, 5, 7]))
+    dropout_tcn  = get_hp(hp, 0.4,   lambda h: h.Float("tcn_dropout", 0.2, 0.5, step=0.1))
+    dropout_pool = get_hp(hp, 0.5, lambda h: h.Float("tcn_dropout_pool", 0.3, 0.6, step=0.1))
+    dropout_clf  = get_hp(hp, 0.4,  lambda h: h.Float("tcn_dropout_clf", 0.2, 0.5, step=0.1))
+    dense_units  = get_hp(hp, 16,   lambda h: h.Choice("tcn_dense_units", [8, 16, 32, 64]))
+    l2_rate      = get_hp(hp, 1e-3,          lambda h: h.Float("tcn_l2", 1e-5, 1e-2, sampling="log"))
+    lr = get_hp(hp, 5e-4, lambda h: h.Float("tcn_lr", 1e-4, 3e-3, sampling="log"))
+
+    dilations_key = get_hp(hp, "large", lambda h: h.Choice("tcn_dilatations", ["small", "medium", "large"]))
+    dilations = DILATIONS_MAP[dilations_key]
 
     x = TCN(
         nb_filters=nb_filters,
         kernel_size=kernel_size,
-        dilations=[1, 2, 4, 8, 16],
+        dilations=dilations,
         padding="causal",
         use_skip_connections=True,
         use_layer_norm=True,
