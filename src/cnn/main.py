@@ -77,30 +77,27 @@ def run_experiment(target_prolapses: List[str]):
             x_train, x_eval = scale_data(data[train_idx], data[eval_idx])
             y_train, y_eval = objective[train_idx], objective[eval_idx]
             
-            # Balanceo de carga (como el scale_pos_weight de XGBoost)
             num_pos = np.sum(y_train)
             num_neg = len(y_train) - num_pos
             cw = {0: 1.0, 1: num_neg / num_pos if num_pos > 0 else 1.0}
             input_shape=x_train.shape[1:]
 
-            tuner = get_tuner(lambda hp: make_model_res_net1D(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment="tcn")
+            tuner = get_tuner(lambda hp: make_model_tcn(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment="tcn")
             tuner.search(x_train, y_train,
                 validation_data=(x_eval, y_eval),
-                epochs=50,
+                epochs=25,
                 batch_size=16,
                 class_weight=cw,
                 verbose=0,
                 callbacks=[EarlyStopping(monitor='val_pr_auc', patience=5, restore_best_weights=True, mode='max')])
             
             hp = tuner.get_best_hyperparameters()[0]
-            # model = make_model_res_net1D(input_shape=x_train.shape[1:])
-            # model = make_model_tcn(input_shape=x_train.shape[1:])
-            model = make_model_tcn(hp,input_shape=x_train.shape[1:])
+            model = make_model_tcn(hp,input_shape=input_shape)
         
             history = model.fit(
                 x_train, y_train,
                 validation_data=(x_eval, y_eval),
-                epochs=50,
+                epochs=25,
                 batch_size=16,
                 class_weight=cw,
                 verbose=0,
@@ -114,7 +111,7 @@ def run_experiment(target_prolapses: List[str]):
             all_fold_meta.append(meta_df.iloc[eval_idx])
 
 
-            plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn=False)
+            plot_auc_pr_evol(prolapse_name, fold_idx, history)
             plot_loss(history, prolapse_name,fold_idx)
 
             clear_session()
@@ -141,7 +138,7 @@ def main():
 
     print(f"\n--- Iniciando Experimento CNN Comparativo: {df_name} | {drop_name} ---")
     
-    experiment_results = run_experiment([target_prolapses[6]])
+    experiment_results = run_experiment([target_prolapses[3]])
     
     context = f"CNN Model | Dataset: {df_name} | Features: {drop_name}"
     report_filename = f"exp_{df_name}_{drop_name}_cnn.html"

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 def plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn = True):
     folder = "cnn" if cnn else "lstm"
@@ -13,27 +12,6 @@ def plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn = True):
     plt.title(f'Curvas de entrenamiento — {prolapse_name} | Fold {fold_idx}')
 
     save_path = Path(f'results/{folder}/{fold_idx}/training_curve_{prolapse_name}_fold{fold_idx}.png')
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-
-    plt.savefig(save_path)
-    plt.close()
-
-def plot_pred_vs_y(prolapse_name, grouped_pred, grouped_y, cnn=True):
-    folder = "cnn" if cnn else "lstm"
-
-    plt.figure(figsize=(10,5))
-
-    x = np.arange(len(grouped_y))
-
-    plt.plot(x, grouped_y, label="Real", linewidth=2)
-    plt.plot(x, grouped_pred, label="Predicción", linewidth=2)
-
-    plt.xlabel("Muestra")
-    plt.ylabel("Valor")
-    plt.title(f"Predicción vs Real (línea) — {prolapse_name}")
-    plt.legend()
-
-    save_path = Path(f'results/{folder}/line_pred_vs_real_{prolapse_name}.png')
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(save_path)
