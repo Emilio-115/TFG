@@ -2,8 +2,11 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-def plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn = True):
-    folder = "cnn" if cnn else "lstm"
+expermients = ["res_net","tcn", "lstm"]
+
+def plot_auc_pr_evol(prolapse_name, fold_idx, history, experiment="tcn"):
+    if experiment not in expermients:
+        raise Exception("Experimento no disponible")
 
     plt.figure()
     plt.plot(history.history['pr_auc'], label='Train PR-AUC')
@@ -11,15 +14,13 @@ def plot_auc_pr_evol(prolapse_name, fold_idx, history, cnn = True):
     plt.legend()
     plt.title(f'Curvas de entrenamiento — {prolapse_name} | Fold {fold_idx}')
 
-    save_path = Path(f'results/{folder}/{fold_idx}/training_curve_{prolapse_name}_fold{fold_idx}.png')
+    save_path = Path(f'results/{experiment}/{prolapse_name}/training_curve_fold{fold_idx}.png')
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(save_path)
     plt.close()
 
-def plot_loss(history, prolapse_name, fold_idx,cnn=True):
-    folder = "cnn" if cnn else "lstm"
-
+def plot_loss(history, prolapse_name, fold_idx,experiment="tcn"):
     plt.figure(figsize=(10, 6))
     
     train_loss = history.history['loss']
@@ -36,7 +37,7 @@ def plot_loss(history, prolapse_name, fold_idx,cnn=True):
     plt.legend()
     plt.grid(True)
     
-    save_path = Path(f'results/{folder}/loss_{prolapse_name}_fold_{fold_idx}.png')
+    save_path = Path(f'results/{experiment}/{prolapse_name}/loss_fold_{fold_idx}.png')
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(save_path)
