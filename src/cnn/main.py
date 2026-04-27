@@ -58,13 +58,13 @@ def obtain_final_metrics(y_true, y_pred_probs):
     return Results(classif_report=report, conf_matrix=conf_matrix,
                    ap_0=ap_0, ap_1=ap_1, roc_auc_0=roc_auc_0, roc_auc_1=roc_auc_1)
 
-def run_experiment(target_prolapses: List[str]):
+def run_experiment(target_prolapses: List[str], use_res_net:bool):
     res = dict()
     
     for prolapse_name in target_prolapses:
         print(f"\n · CNN: {prolapse_name} | {datetime.now()}")
         data, objective, meta_df = load_data(prolapse_name)
-        
+        experiment = "res_net" if use_res_net else "tcn"
         groups = meta_df["case_id"].values
         sgkf = StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42)
 
@@ -82,7 +82,9 @@ def run_experiment(target_prolapses: List[str]):
             cw = {0: 1.0, 1: num_neg / num_pos if num_pos > 0 else 1.0}
             input_shape=x_train.shape[1:]
 
-            tuner = get_tuner(lambda hp: make_model_tcn(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment="tcn")
+            chosen_model = make_model_res_net1D if use_res_net else make_model_tcn
+
+            tuner = get_tuner(lambda hp: chosen_model(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment=experiment)
             tuner.search(x_train, y_train,
                 validation_data=(x_eval, y_eval),
                 epochs=25,
@@ -92,7 +94,7 @@ def run_experiment(target_prolapses: List[str]):
                 callbacks=[EarlyStopping(monitor='val_pr_auc', patience=5, restore_best_weights=True, mode='max')])
             
             hp = tuner.get_best_hyperparameters()[0]
-            model = make_model_tcn(hp,input_shape=input_shape)
+            model = chosen_model(hp,input_shape=input_shape)
 
             history = model.fit(
                 x_train, y_train,
@@ -111,8 +113,8 @@ def run_experiment(target_prolapses: List[str]):
             all_fold_meta.append(meta_df.iloc[eval_idx])
 
 
-            plot_auc_pr_evol(prolapse_name, fold_idx, history)
-            plot_loss(history, prolapse_name,fold_idx)
+            plot_auc_pr_evol(prolapse_name, fold_idx, history, experiment)
+            plot_loss(history, prolapse_name,fold_idx, experiment)
 
             clear_session()
 
@@ -131,17 +133,18 @@ def run_experiment(target_prolapses: List[str]):
 
 
 
-def main():
+def main(res_net = True):
     df_name = "60w_15s"
     drop_name = "all"
     target_prolapses = PROLAPSES 
-
+    experiment = "res_net" if res_net else "tcn"
+    print(experiment)
     print(f"\n--- Iniciando Experimento CNN Comparativo: {df_name} | {drop_name} ---")
     
-    experiment_results = run_experiment([target_prolapses[3]])
+    experiment_results = run_experiment([target_prolapses[3]], res_net)
     
-    context = f"CNN Model | Dataset: {df_name} | Features: {drop_name}"
-    report_filename = f"exp_{df_name}_{drop_name}_cnn.html"
+    context = f"{experiment.upper()} Model | Dataset: {df_name} | Features: {drop_name}"
+    report_filename = f"exp_{df_name}_{drop_name}_{experiment}.html"
     
     generate_html_report(experiment_results, report_filename, context)
     print(f"\nReporte generado: {report_filename}")

@@ -93,7 +93,7 @@ def make_model_res_net1D(hp: kt.HyperParameters, input_shape):
     return model
 
 
-def make_model_tcn(hp, input_shape):
+def make_model_tcn(hp: kt.HyperParameters, input_shape):
     inputs = Input(shape=input_shape)
     DILATIONS_MAP = {
     "small": [1, 2, 4],
