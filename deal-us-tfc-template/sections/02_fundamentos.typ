@@ -1,6 +1,6 @@
 #import "@preview/deal-us-tfc-template:1.0.0": *
 
-= Estudio previo
+= Fundamentos y estado del arte
 <sec:planificación>
 
 == Introducción

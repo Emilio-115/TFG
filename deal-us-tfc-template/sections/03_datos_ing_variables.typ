@@ -1,6 +1,6 @@
 #import "@preview/deal-us-tfc-template:1.0.0": *
 
-= Análisis del problema
+= Datos e Ingeniería de variables
 <sec:análisis>
 
 == Introducción
