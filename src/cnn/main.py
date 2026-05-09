@@ -12,17 +12,20 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
+from keras.models import Model
+from keras.callbacks import History
 from keras.backend import clear_session
 from sklearn.model_selection import StratifiedGroupKFold
 
 from src.cnn.models import make_model_res_net1D, make_model_tcn
 from src.utils.plots import plot_auc_pr_evol, plot_loss
 from src.utils.scaler import scale_data
-from src.utils.tuner import get_tuner
+from src.utils.tuner import get_keras_tuner, get_optuna_study
 from src.xgboost_impl.aggregations import group_predictions_by_case
 from src.xgboost_impl.register_data import generate_html_report
 from src.xgboost_impl.schemas import Results
-
+import optuna
+from typing import Callable
 
 matplotlib.use('Agg')
 
@@ -58,44 +61,68 @@ def obtain_final_metrics(y_true, y_pred_probs):
     return Results(classif_report=report, conf_matrix=conf_matrix,
                    ap_0=ap_0, ap_1=ap_1, roc_auc_0=roc_auc_0, roc_auc_1=roc_auc_1)
 
-def run_experiment(target_prolapses: List[str], use_res_net:bool):
+
+def optuna_objective(
+    trial: optuna.Trial,
+    chosen_model: Callable[...,Model],
+    input_shape: tuple,
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    x_eval: np.ndarray,
+    y_eval: np.ndarray,
+    class_weight: dict,
+) -> float:
+    clear_session()
+    model: Model = chosen_model(trial, input_shape)
+    history: History = model.fit(
+        x_train, y_train,
+        validation_data=(x_eval, y_eval),
+        epochs=25,
+        batch_size=16,
+        class_weight=class_weight,
+        verbose=0,
+        callbacks=[EarlyStopping(
+            monitor="val_pr_auc", patience=5,
+            restore_best_weights=True, mode="max"
+        )],
+    )
+    return max(history.history["val_pr_auc"])
+
+def run_experiment(target_prolapses: List[str], use_res_net: bool):
     res = dict()
-    
+
     for prolapse_name in target_prolapses:
         print(f"\n · CNN: {prolapse_name} | {datetime.now()}")
         data, objective, meta_df = load_data(prolapse_name)
         experiment = "res_net" if use_res_net else "tcn"
+        chosen_model = make_model_res_net1D if use_res_net else make_model_tcn
         groups = meta_df["case_id"].values
-        sgkf = StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42)
+        sgkf   = StratifiedGroupKFold(n_splits=3, shuffle=True, random_state=42)
 
         all_fold_probs = []
-        all_fold_true = []
-        all_fold_meta = []
-        
+        all_fold_true  = []
+        all_fold_meta  = []
+
         for fold_idx, (train_idx, eval_idx) in enumerate(sgkf.split(data, objective, groups)):
             print(f"\n · CNN: {prolapse_name} | Fold {fold_idx}")
+
             x_train, x_eval = scale_data(data[train_idx], data[eval_idx])
             y_train, y_eval = objective[train_idx], objective[eval_idx]
-            
+
             num_pos = np.sum(y_train)
             num_neg = len(y_train) - num_pos
             cw = {0: 1.0, 1: num_neg / num_pos if num_pos > 0 else 1.0}
-            input_shape=x_train.shape[1:]
-
-            chosen_model = make_model_res_net1D if use_res_net else make_model_tcn
-
-            tuner = get_tuner(lambda hp: chosen_model(hp, input_shape),fold_idx=fold_idx, prolapse_name=prolapse_name,experiment=experiment)
-            tuner.search(x_train, y_train,
-                validation_data=(x_eval, y_eval),
-                epochs=25,
-                batch_size=16,
-                class_weight=cw,
-                verbose=0,
-                callbacks=[EarlyStopping(monitor='val_pr_auc', patience=5, restore_best_weights=True, mode='max')])
+            input_shape = x_train.shape[1:]
+            def optimize_study(trial):
+                return optuna_objective(trial, chosen_model, input_shape, x_train, y_train, x_eval, y_eval, cw)
             
-            hp = tuner.get_best_hyperparameters()[0]
-            model = chosen_model(hp,input_shape=input_shape)
 
+            study = get_optuna_study(fold_idx, prolapse_name, experiment)
+            study.optimize(optimize_study, n_trials=5, n_jobs=1)
+
+            clear_session()
+            best_trial = study.best_trial
+            model = chosen_model(best_trial, input_shape)
             history = model.fit(
                 x_train, y_train,
                 validation_data=(x_eval, y_eval),
@@ -103,18 +130,21 @@ def run_experiment(target_prolapses: List[str], use_res_net:bool):
                 batch_size=16,
                 class_weight=cw,
                 verbose=0,
-                callbacks=[EarlyStopping(monitor='val_pr_auc', patience=5, restore_best_weights=True, mode='max')]
+                callbacks=[EarlyStopping(
+                    monitor="val_pr_auc", patience=5,
+                    restore_best_weights=True, mode="max"
+                )],
             )
 
             probs = model.predict(x_eval, verbose=0).flatten()
-            
+
             all_fold_probs.append(probs)
             all_fold_true.append(y_eval)
             all_fold_meta.append(meta_df.iloc[eval_idx])
 
 
             plot_auc_pr_evol(prolapse_name, fold_idx, history, experiment)
-            plot_loss(history, prolapse_name,fold_idx, experiment)
+            plot_loss(history, prolapse_name, fold_idx, experiment)
 
             clear_session()
 
@@ -126,7 +156,9 @@ def run_experiment(target_prolapses: List[str], use_res_net:bool):
             combined_meta, combined_probs, combined_true
         )
 
-        res[prolapse_name] = obtain_final_metrics(y_true=grouped_y, y_pred_probs=grouped_pred)
+        res[prolapse_name] = obtain_final_metrics(
+            y_true=grouped_y, y_pred_probs=grouped_pred
+        )
         print(f"    {prolapse_name} finalizado. AP_1: {res[prolapse_name].ap_1:.4f}")
 
     return res
