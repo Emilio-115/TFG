@@ -64,29 +64,46 @@ def obtain_final_metrics(y_true, y_pred_probs):
 
 def optuna_objective(
     trial: optuna.Trial,
-    chosen_model: Callable[...,Model],
+    chosen_model: Callable[..., Model],
     input_shape: tuple,
     x_train: np.ndarray,
     y_train: np.ndarray,
-    x_eval: np.ndarray,
-    y_eval: np.ndarray,
-    class_weight: dict,
+    groups_train: np.ndarray,
+    fold_idx: int,
+    inner_n_splits: int = 3,
 ) -> float:
-    clear_session()
-    model: Model = chosen_model(trial, input_shape)
-    history: History = model.fit(
-        x_train, y_train,
-        validation_data=(x_eval, y_eval),
-        epochs=25,
-        batch_size=16,
-        class_weight=class_weight,
-        verbose=0,
-        callbacks=[EarlyStopping(
-            monitor="val_pr_auc", patience=5,
-            restore_best_weights=True, mode="max"
-        )],
+    inner_sgkf = StratifiedGroupKFold(
+        n_splits=inner_n_splits, shuffle=True,
+        random_state=fold_idx * 10 + trial.number
     )
-    return max(history.history["val_pr_auc"])
+
+    scores = []
+    for inner_train_idx, inner_val_idx in inner_sgkf.split(x_train, y_train, groups_train):
+        x_tr, x_val = x_train[inner_train_idx], x_train[inner_val_idx]
+        y_tr, y_val = y_train[inner_train_idx], y_train[inner_val_idx]
+
+        num_pos = np.sum(y_tr)
+        num_neg = len(y_tr) - num_pos
+        inner_cw = {0: 1.0, 1: min(num_neg / num_pos, 6.0)}
+
+        clear_session()
+        model = chosen_model(trial, input_shape)
+        model.fit(
+            x_tr, y_tr,
+            validation_data=(x_val, y_val),
+            epochs=30,
+            batch_size=64,
+            class_weight=inner_cw,
+            verbose=0,
+            callbacks=[EarlyStopping(
+                monitor="val_pr_auc", patience=3,
+                restore_best_weights=True, mode="max"
+            )],
+        )
+        val_probs = model.predict(x_val, verbose=0).flatten()
+        scores.append(average_precision_score(y_true=y_val, y_score=val_probs))
+
+    return np.mean(scores)
 
 def run_experiment(target_prolapses: List[str], use_res_net: bool):
     res = dict()
@@ -113,12 +130,14 @@ def run_experiment(target_prolapses: List[str], use_res_net: bool):
             num_neg = len(y_train) - num_pos
             cw = {0: 1.0, 1: num_neg / num_pos if num_pos > 0 else 1.0}
             input_shape = x_train.shape[1:]
+            groups_train = meta_df.iloc[train_idx]["case_id"].values
+            inner_splits = 2 if prolapse_name in {"cystourethrocele", "enterocele"} else 3
+
             def optimize_study(trial):
-                return optuna_objective(trial, chosen_model, input_shape, x_train, y_train, x_eval, y_eval, cw)
-            
+                return optuna_objective(trial, chosen_model, input_shape, x_train, y_train, groups_train, fold_idx, inner_splits)
 
             study = get_optuna_study(fold_idx, prolapse_name, experiment)
-            study.optimize(optimize_study, n_trials=5, n_jobs=1)
+            study.optimize(optimize_study, n_trials=10, n_jobs=1)
 
             clear_session()
             best_trial = study.best_trial
