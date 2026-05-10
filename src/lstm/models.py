@@ -15,9 +15,9 @@ def make_model_bilstm(trial: optuna.Trial, input_shape):
 
     inputs = Input(shape=input_shape)
 
-    lstm_units    = hp(16,   lambda t: t.suggest_categorical("lstm_units", [4, 8, 16, 32]))
+    lstm_units    = hp(16,   lambda t: t.suggest_categorical("lstm_units", [8, 16, 32, 64]))
     dropout_lstm  = hp(0.3,  lambda t: t.suggest_float("lstm_dropout", 0.1, 0.5, step=0.1))
-    # rec_dropout   = hp(0.3,  lambda t: t.suggest_float("lstm_rec_dropout", 0.1, 0.4, step=0.1))
+    rec_dropout   = hp(0.3,  lambda t: t.suggest_float("lstm_rec_dropout", 0.1, 0.4, step=0.1))
     dropout_mid   = hp(0.5,  lambda t: t.suggest_float("lstm_dropout_mid", 0.3, 0.6, step=0.1))
     dense_units   = hp(16,   lambda t: t.suggest_categorical("lstm_dense_units", [8, 16, 32]))
     dropout_clf   = hp(0.4,  lambda t: t.suggest_float("lstm_dropout_clf", 0.2, 0.5, step=0.1))
@@ -28,7 +28,7 @@ def make_model_bilstm(trial: optuna.Trial, input_shape):
         lstm_units,
         return_sequences=False,
         dropout=dropout_lstm,
-        # recurrent_dropout=rec_dropout
+        recurrent_dropout=rec_dropout
     ))(inputs)
     x = LayerNormalization()(x)
 
