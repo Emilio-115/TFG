@@ -118,3 +118,21 @@ def generate_html_report(results:Dict[str,Results], file_name="reporte_final.htm
         f.write(html)
 
     print(f"✅ Reporte guardado en: {full_path}")
+
+def save_fold_class_info(prolapse_name, fold_idx, y_train, y_eval, experiment="tcn"):
+    from datetime import datetime
+    import os
+    file_path = os.path.join(os.getcwd(), "results", experiment, prolapse_name, "fold_info.csv")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    date_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    rows = [
+        {"fold": fold_idx, "split": "train", "positive": int(y_train.sum()), "negative": int((1 - y_train).sum())},
+        {"fold": fold_idx, "split": "eval",  "positive": int(y_eval.sum()),  "negative": int((1 - y_eval).sum())},
+    ]
+    df = pd.DataFrame(rows)
+    df["proportion"] = (df["positive"] / (df["positive"] + df["negative"])).round(4)
+    df["date"] = date_str
+
+    header = not os.path.exists(file_path)
+    df.to_csv(file_path, mode="a", header=header, index=False)
