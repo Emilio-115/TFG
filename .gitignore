@@ -16,3 +16,4 @@ data/segments/*
 *.h5
 *.png
 *.html
+*.db
