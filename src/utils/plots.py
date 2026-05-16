@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import os
 
 expermients = ["res_net","tcn", "lstm"]
 
@@ -41,4 +42,33 @@ def plot_loss(history, prolapse_name, fold_idx,experiment="tcn"):
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     plt.savefig(save_path)
+    plt.close()
+
+
+def plot_xgb_loss(evals_result: dict, prolapse_name: str, fold_idx: int):
+    train_loss = evals_result['train']['logloss']
+    val_loss   = evals_result['val']['logloss']
+    plt.figure()
+    plt.plot(train_loss, label='Entrenamiento (Loss)')
+    plt.plot(val_loss,   label='Validación (Loss)')
+    plt.xlabel('Árboles')
+    plt.ylabel('Log Loss')
+    plt.title(f'Curva de Pérdida - {prolapse_name} | Fold {fold_idx}')
+    plt.legend()
+    os.makedirs(f'results/xgboost/plots/{prolapse_name}', exist_ok=True)
+    plt.savefig(f'results/xgboost/plots/{prolapse_name}/loss_fold{fold_idx}.png')
+    plt.close()
+
+def plot_xgb_ap(evals_result: dict, prolapse_name: str, fold_idx: int):
+    train_ap = evals_result['train']['aucpr']
+    val_ap   = evals_result['val']['aucpr']
+    plt.figure()
+    plt.plot(train_ap, label='Train PR-AUC')
+    plt.plot(val_ap,   label='Val PR-AUC')
+    plt.xlabel('Árboles')
+    plt.ylabel('PR-AUC')
+    plt.title(f'Curvas de entrenamiento — {prolapse_name} | Fold {fold_idx}')
+    plt.legend()
+    os.makedirs(f'results/xgboost/plots/{prolapse_name}', exist_ok=True)
+    plt.savefig(f'results/xgboost/plots/{prolapse_name}/prauc_fold{fold_idx}.png')
     plt.close()

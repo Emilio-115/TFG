@@ -103,5 +103,5 @@ if __name__ == '__main__':
     global_ranking = compute_global_ranking(data)
     save_rankings(data, global_ranking, EXPERIMENT)
 
-    print(f'\nTop 10 global:')
+    print('\nTop 10 global:')
     print(global_ranking.head(10).to_string(index=False))

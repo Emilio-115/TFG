@@ -5,6 +5,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score, average_precision_score, classification_report, confusion_matrix
 import optuna
 from src.dataset_builder.feature_definitions import COL_SELECTION, NEW_FEATS
+from src.utils.plots import plot_xgb_ap, plot_xgb_loss
 from .register_data import generate_html_report
 from .aggregations import group_predictions_by_case
 from .schemas import Results
@@ -16,7 +17,7 @@ from pathlib import Path
 drop_selection = []
 prolapses = ['any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse',
              'cervical_elongation', 'rectocele', 'enterocele']
-DF_PATH = 'data/case_level_feats_alltargets_v2.csv'
+DF_PATH = 'data/case_level_feats_alltargets_w60_s15_v3.csv'
 save_perm_name = "importance"
 
 
@@ -57,7 +58,6 @@ def load_data(prolapse: int = 0, use_top_n: int = None,add_top_n: int = None):
         if ranking_path.exists():
             ranking = pd.read_csv(ranking_path)
             top_features = set(ranking.head(add_top_n)['feature'])
-
             cols_to_add = [c for c in top_features if c in df.columns and c not in data.columns]
             if cols_to_add:
                 data = pd.concat([data, df[cols_to_add]], axis=1)
@@ -117,18 +117,19 @@ def run_experiment(target_prolapses: list[str]):
         all_predictions = []
         all_true_labels = []
         all_eval_data = []
-
-        for train_index, eval_index in sgkf.split(data, objective, groups):
+        
+        for fold_idx, (train_index, eval_index) in enumerate(sgkf.split(data, objective, groups)):
             train = data.iloc[train_index].reset_index(drop=True)
             train_obj = objective.iloc[train_index].reset_index(drop=True)
             eval_data = data.iloc[eval_index].reset_index(drop=True)
             eval_obj = objective.iloc[eval_index].reset_index(drop=True)
+            eval_data_no_case = eval_data.drop(columns=["case"])
 
             def obj(trial, _train=train, _train_obj=train_obj):
                 return optimize_params(trial, data=_train, objective=_train_obj)
 
             study = optuna.create_study(direction='maximize')
-            study.optimize(obj, n_trials=25, n_jobs=5)
+            study.optimize(obj, n_trials=35, n_jobs=5)
 
             pos_weight = 1.0
             if len(train_obj[train_obj == True]) > 0:
@@ -138,12 +139,29 @@ def run_experiment(target_prolapses: list[str]):
             params = study.best_params
             params["enable_categorical"] = True
 
-            xgbc = XGBClassifier(**params, scale_pos_weight=pos_weight, base_score=0.5)
-            xgbc.fit(X=train_no_case, y=train_obj)
+            xgbc = XGBClassifier(**params, scale_pos_weight=pos_weight, base_score=0.5, eval_metric=['logloss', 'aucpr'])
+            xgbc.fit(
+                X=train_no_case, y=train_obj,
+                eval_set=[
+                    (train_no_case, train_obj),
+                    (eval_data_no_case, eval_obj)
+                ],
+                
+                verbose=False,
+            )
 
-            eval_data_no_case = eval_data.drop(columns=["case"])
+            evals_result = xgbc.evals_result()
+
+            evals_renamed = {
+                'train': evals_result['validation_0'],
+                'val':   evals_result['validation_1']
+            }
+
             prediction = xgbc.predict_proba(X=eval_data_no_case)[:, 1]
 
+            plot_xgb_loss(evals_renamed, prolapse_name, fold_idx)
+            plot_xgb_ap(evals_renamed,   prolapse_name, fold_idx)
+            
             perm_result = permutation_importance(
                 xgbc, eval_data_no_case, eval_obj,
                 n_repeats=10, random_state=42, scoring='average_precision'
