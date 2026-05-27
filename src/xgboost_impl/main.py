@@ -4,7 +4,7 @@ from xgboost import XGBClassifier
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import roc_auc_score, average_precision_score, classification_report, confusion_matrix
 import optuna
-from src.dataset_builder.feature_definitions import COL_SELECTION, NEW_FEATS
+from src.dataset_builder.feature_definitions import COL_SELECTION
 from src.utils.plots import plot_xgb_ap, plot_xgb_loss
 from .register_data import generate_html_report
 from .aggregations import group_predictions_by_case
@@ -20,15 +20,6 @@ prolapses = ['any_prolapse', 'cystocele', 'cystourethrocele', 'uterine_prolapse'
 DF_PATH = 'data/case_level_feats_alltargets_w60_s15_v3.csv'
 save_perm_name = "importance"
 
-
-
-#def load_data(prolapse: int = 0):
-#    ignored_obj = np.delete(prolapses, [prolapse])
-#    df = pd.read_csv(DF_PATH, usecols=lambda col: col not in ignored_obj)
-#    data, objective = df.drop(prolapses[prolapse], axis=1), df[prolapses[prolapse]]
-#    data['organ'] = data['organ'].astype('category')
-#    data = data.drop(columns=["nhc_final", 'start_frame', 'end_frame'] + drop_selection)
-#    return data, objective
 
 RANKINGS_DIR = 'results/importance/rankings'
 
@@ -185,7 +176,7 @@ def run_experiment(target_prolapses: list[str]):
             combined_eval_data, combined_predictions, combined_true_labels
         )
 
-        res[prolapse_name] = obtain_final_metrics(y_true=grouped_y, y_pred=grouped_pred)
+        res[prolapse_name] = obtain_final_metrics(y_true=grouped_y, y_pred_probs=grouped_pred)
         print(f"    {prolapse_name}: {res[prolapse_name]}")
 
     save_permutation_importance(all_perm_importances)
@@ -209,13 +200,14 @@ def save_permutation_importance(all_perm_importances: dict):
         print(f"  Permutation importance agregada guardada: {agg_path}")
 
 
-def obtain_final_metrics(y_true, y_pred):
-    report = classification_report(y_true=y_true, y_pred=y_pred, output_dict=True)
-    conf_matrix = confusion_matrix(y_true=y_true, y_pred=y_pred)
-    ap_1 = average_precision_score(y_true=y_true, y_score=y_pred)
-    ap_0 = average_precision_score(1 - y_true, 1 - y_pred)
-    roc_auc_1 = roc_auc_score(y_true=y_true, y_score=y_pred)
-    roc_auc_0 = roc_auc_score(y_true=1 - y_true, y_score=1 - y_pred)
+def obtain_final_metrics(y_true, y_pred_probs):
+    y_pred_classes = (y_pred_probs > 0.5).astype(int)
+    report = classification_report(y_true=y_true, y_pred=y_pred_classes, output_dict=True)
+    conf_matrix = confusion_matrix(y_true=y_true, y_pred=y_pred_classes)
+    ap_1 = average_precision_score(y_true=y_true, y_score=y_pred_probs)
+    ap_0 = average_precision_score(1 - y_true, 1 - y_pred_probs)
+    roc_auc_1 = roc_auc_score(y_true=y_true, y_score=y_pred_probs)
+    roc_auc_0 = roc_auc_score(y_true=1 - y_true, y_score=1 - y_pred_probs)
     return Results(classif_report=report, conf_matrix=conf_matrix,
                    ap_0=ap_0, ap_1=ap_1, roc_auc_0=roc_auc_0, roc_auc_1=roc_auc_1)
 

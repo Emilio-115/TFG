@@ -86,7 +86,7 @@ def group_predictions_by_case(eval_data: pd.DataFrame, prediction, y: pd.Series)
         'target': 'first' 
     })
     print(grouped.head())
-    final_preds = (grouped['pred'] >= 0.5).astype(int).values
+    final_preds = grouped['pred'].values
     final_y = grouped['target'].astype(int).values
 
     return final_preds, final_y
