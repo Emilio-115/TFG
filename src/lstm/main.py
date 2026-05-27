@@ -18,7 +18,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 from src.lstm.models import make_model_bilstm
 from src.utils.plots import plot_auc_pr_evol, plot_loss
 from src.utils.scaler import scale_data
-from src.utils.tuner import get_optuna_study
+from src.utils.tuner import get_keras_tuner, get_optuna_study
 from src.xgboost_impl.aggregations import group_predictions_by_case
 from src.xgboost_impl.register_data import generate_html_report
 from src.xgboost_impl.schemas import Results
@@ -32,6 +32,7 @@ META_DF_PATH = "data/nn_meta.csv"
 RANKINGS_DIR = 'results/importance/rankings'
 
 def load_data(prolapse: str = "any_prolapse", add_top_n: int = 10):
+    #TODO Filtrar variables
 
     data: np.ndarray = np.load(DATA_PATH)
 
@@ -127,7 +128,7 @@ def run_experiment(target_prolapses: List[str]):
                 return optuna_objective(trial, make_model_bilstm, input_shape, x_train, y_train, groups_train, cw, fold_idx, inner_splits)
 
             study = get_optuna_study(fold_idx, prolapse_name, experiment)
-            study.optimize(optimize_study, n_trials=25, n_jobs=1)
+            study.optimize(optimize_study, n_trials=5, n_jobs=1)
 
             clear_session()
             best_trial = study.best_trial
@@ -173,7 +174,7 @@ def main():
 
     print(f"\n--- Iniciando Experimento LSTM Comparativo: {df_name} | {drop_name} ---")
     
-    experiment_results = run_experiment(target_prolapses)
+    experiment_results = run_experiment([target_prolapses[3]])
     
     context = f"LSTM Model | Dataset: {df_name} | Features: {drop_name}"
     report_filename = f"exp_{df_name}_{drop_name}_lstm.html"
