@@ -1,7 +1,7 @@
 [project]
 name = "tfg"
 version = "0.1.0"
-description = "Add your description here"
+description = "Dependencias usadas para implementación de este trabajo."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
