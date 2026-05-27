@@ -135,7 +135,7 @@ def run_experiment(target_prolapses: List[str], use_res_net: bool):
                 return optuna_objective(trial, chosen_model, input_shape, x_train, y_train, groups_train, fold_idx, inner_splits)
 
             study = get_optuna_study(fold_idx, prolapse_name, experiment)
-            study.optimize(optimize_study, n_trials=10, n_jobs=1)
+            study.optimize(optimize_study, n_trials=25, n_jobs=1)
 
             clear_session()
             best_trial = study.best_trial
