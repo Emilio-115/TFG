@@ -22,25 +22,23 @@ from keras.optimizers import Adam
 from keras.regularizers import l2
 from tcn import TCN
 
-
 def make_model_res_net1D(trial: optuna.Trial, input_shape):
     def hp(default, fn: Callable[[optuna.Trial], Any]):
         return fn(trial) if trial is not None else default
 
     inputs = Input(shape=input_shape)
 
-    filters_b1   = hp(32,   lambda t: t.suggest_categorical("resnet_filters_b1",   [16, 32, 64]))
-    filters_b2   = hp(64,   lambda t: t.suggest_categorical("resnet_filters_b2",   [32, 64, 128]))
-    filters_b3   = filters_b2   # restricción fija: debe igualar filters_b2
+    filters_b1   = hp(16,   lambda t: t.suggest_categorical("resnet_filters_b1",   [32, 64]))
+    filters_b2   = hp(32,   lambda t: t.suggest_categorical("resnet_filters_b2",   [32, 64]))
     kernel_b1    = hp(5,    lambda t: t.suggest_categorical("resnet_kernel_b1",    [3, 5, 7]))
-    l2_rate      = hp(1e-4, lambda t: t.suggest_float("resnet_l2",        1e-5, 1e-2, log=True))
-    dropout_b1   = hp(0.2,  lambda t: t.suggest_float("resnet_dropout_b1",  0.1, 0.4, step=0.1))
-    dropout_b2b3 = hp(0.3,  lambda t: t.suggest_float("resnet_dropout_b2b3",0.1, 0.4, step=0.1))
+    l2_rate      = hp(1e-4, lambda t: t.suggest_float("resnet_l2",        1e-4, 1e-2, log=True))
+    dropout_b1   = hp(0.2,  lambda t: t.suggest_float("resnet_dropout_b1",  0.2, 0.5, step=0.1))
+    dropout_b2b3 = hp(0.3,  lambda t: t.suggest_float("resnet_dropout_b2b3",0.2, 0.5, step=0.1))
     dropout_pool = hp(0.5,  lambda t: t.suggest_float("resnet_dropout_pool",0.3, 0.6, step=0.1))
-    dropout_clf  = hp(0.4,  lambda t: t.suggest_float("resnet_dropout_clf", 0.2, 0.5, step=0.1))
-    dense_units  = hp(32,   lambda t: t.suggest_categorical("resnet_dense_units",  [16, 32, 64]))
+    dropout_clf  = hp(0.4,  lambda t: t.suggest_float("resnet_dropout_clf", 0.3, 0.5, step=0.1))
+    dense_units  = hp(32,   lambda t: t.suggest_categorical("resnet_dense_units",  [8, 16, 32]))
     lr           = hp(5e-4, lambda t: t.suggest_float("resnet_lr",        1e-4, 1e-2, log=True))
-    # enable_block3 = hp(False, lambda t: t.suggest_categorical("resnet_use_block3", [True, False]))
+    
 
     # ── Bloque 1 ──────────────────────────────────────────────
     x = Conv1D(filters_b1, kernel_b1, padding="same", kernel_regularizer=l2(l2_rate))(inputs)
@@ -58,18 +56,6 @@ def make_model_res_net1D(trial: optuna.Trial, input_shape):
     x = LayerNormalization()(x)
     x = Add()([x, shortcut])
     x = ReLU()(x)
-
-    # ── Bloque 3 (residual) ───────────────────────────────────
-    if False:
-        shortcut2 = x
-        x = Conv1D(filters_b3, 3, padding="same", kernel_regularizer=l2(l2_rate))(x)
-        x = LayerNormalization()(x)
-        x = ReLU()(x)
-        x = Dropout(dropout_b2b3)(x)
-        x = Conv1D(filters_b3, 3, padding="same", kernel_regularizer=l2(l2_rate))(x)
-        x = LayerNormalization()(x)
-        x = Add()([x, shortcut2])
-        x = ReLU()(x)
 
     # ── Attention Pooling ─────────────────────────────────────
     score  = Dense(1, use_bias=False)(x)
@@ -106,7 +92,7 @@ def make_model_tcn(trial: optuna.Trial, input_shape):
 
     inputs = Input(shape=input_shape)
 
-    nb_filters    = hp(32,      lambda t: t.suggest_categorical("tcn_filters",      [8, 16, 32, 64]))
+    nb_filters    = hp(32,      lambda t: t.suggest_categorical("tcn_filters",      [16, 32, 64]))
     kernel_size   = hp(5,       lambda t: t.suggest_categorical("tcn_kernel",       [3, 5, 7]))
     dropout_tcn   = hp(0.4,     lambda t: t.suggest_float("tcn_dropout",      0.2, 0.5, step=0.1))
     dropout_pool  = hp(0.5,     lambda t: t.suggest_float("tcn_dropout_pool",  0.3, 0.6, step=0.1))

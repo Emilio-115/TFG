@@ -13,14 +13,13 @@ from sklearn.metrics import (
 )
 
 from keras.models import Model
-from keras.callbacks import History
 from keras.backend import clear_session
 from sklearn.model_selection import StratifiedGroupKFold
 
 from src.cnn.models import make_model_res_net1D, make_model_tcn
 from src.utils.plots import plot_auc_pr_evol, plot_loss
 from src.utils.scaler import scale_data
-from src.utils.tuner import get_keras_tuner, get_optuna_study
+from src.utils.tuner import get_optuna_study
 from src.xgboost_impl.aggregations import group_predictions_by_case
 from src.xgboost_impl.register_data import generate_html_report
 from src.xgboost_impl.schemas import Results
@@ -39,7 +38,6 @@ META_DF_PATH = "data/nn_meta.csv"
 RANKINGS_DIR = 'results/importance/rankings'
 
 def load_data(prolapse: str = "any_prolapse", add_top_n: int = 10):
-    #TODO Filtrar variables
 
     data: np.ndarray = np.load(DATA_PATH)
 
@@ -192,7 +190,7 @@ def main(res_net = True):
     print(experiment)
     print(f"\n--- Iniciando Experimento CNN Comparativo: {df_name} | {drop_name} ---")
     
-    experiment_results = run_experiment([target_prolapses[3]], res_net)
+    experiment_results = run_experiment(target_prolapses, res_net)
     
     context = f"{experiment.upper()} Model | Dataset: {df_name} | Features: {drop_name}"
     report_filename = f"exp_{df_name}_{drop_name}_{experiment}.html"
