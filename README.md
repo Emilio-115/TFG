@@ -1,4 +1,4 @@
-# Ingeniería de características y modelos de series temporales para el diagnóstico del prolapso de suelo pélvico: un estudio comparativo
+# Ingeniería de características y modelos de series temporales para el diagnóstico del prolapso de órganos pélvicos: un estudio comparativo
 
 Este repositorio contiene el código desarrollado para el Trabajo de Fin de Grado
 del Grado en Ingeniería Informática. El trabajo aborda el diagnóstico automático
